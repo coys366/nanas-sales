@@ -1,0 +1,2676 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>NANA's Bedding 매출 캘린더</title>
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        nana: { dark: '#1A4D2E', light: '#F3F7F4', accent: '#E65100', gold: '#D4AF37' }
+                    },
+                    fontFamily: { sans: ['Pretendard', 'ui-sans-serif', 'system-ui', '-apple-system', 'sans-serif'] },
+                    boxShadow: {
+                        'soft': '0 4px 20px -2px rgba(0, 0, 0, 0.05)',
+                        'card': '0 2px 10px rgba(0, 0, 0, 0.02)',
+                        'popup': '0 10px 40px -10px rgba(0, 0, 0, 0.2)',
+                        'context': '0 4px 15px rgba(0, 0, 0, 0.15)'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type=time]::-webkit-calendar-picker-indicator, input[type=date]::-webkit-calendar-picker-indicator { cursor: pointer; opacity: 0.6; transition: 0.2s; }
+        input[type=time]::-webkit-calendar-picker-indicator:hover, input[type=date]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
+        .transition-all { transition-property: all; transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1); transition-duration: 200ms; }
+        .text-shadow-sm { text-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body class="bg-[#F8FAFC] font-sans text-gray-800 antialiased min-h-screen relative" onclick="hideContextMenu()">
+
+    <div id="uiAlertModal" class="fixed inset-0 bg-gray-900/40 backdrop-blur-sm z-[120] hidden flex items-center justify-center opacity-0 transition-opacity p-4">
+        <div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl transform scale-95 transition-transform" id="uiAlertBox">
+            <p id="uiAlertMessage" class="text-gray-800 font-bold mb-6 text-center whitespace-pre-line"></p>
+            <button onclick="closeUiAlert()" class="w-full px-4 py-3 bg-nana-dark text-white rounded-xl font-bold hover:bg-green-800 transition-colors">확인</button>
+        </div>
+    </div>
+
+    <div id="uiConfirmModal" class="fixed inset-0 bg-gray-900/40 backdrop-blur-sm z-[120] hidden flex items-center justify-center opacity-0 transition-opacity p-4">
+        <div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl transform scale-95 transition-transform" id="uiConfirmBox">
+            <p id="uiConfirmMessage" class="text-gray-800 font-bold mb-6 text-center whitespace-pre-line"></p>
+            <div class="flex gap-3">
+                <button id="btnUiConfirmCancel" class="flex-1 px-4 py-3 bg-gray-100 text-gray-600 rounded-xl font-bold hover:bg-gray-200 transition-colors">취소</button>
+                <button id="btnUiConfirmOk" class="flex-1 px-4 py-3 bg-red-500 text-white rounded-xl font-bold hover:bg-red-600 transition-colors">삭제</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- [추가] 매장 접속 PIN (기기별 최초 1회) -->
+    <div id="appKeyModal" class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-[110] hidden flex items-center justify-center opacity-0 transition-opacity p-4">
+        <div class="bg-white rounded-2xl p-6 md:p-8 max-w-sm w-full shadow-2xl transform scale-95 transition-transform" id="appKeyModalContent" onclick="event.stopPropagation()">
+            <div class="text-center mb-6">
+                <div class="w-12 h-12 bg-green-50 text-nana-dark rounded-full flex items-center justify-center mx-auto mb-3 border border-green-100">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path></svg>
+                </div>
+                <h3 class="text-xl font-extrabold text-gray-900 tracking-tight">매장 접속 PIN</h3>
+                <p class="text-sm font-medium text-gray-500 mt-1">이 기기에서 처음 한 번만 입력하면 됩니다.</p>
+                <p id="appKeyError" class="hidden text-sm font-bold text-red-500 mt-2"></p>
+            </div>
+            <input type="password" id="inputAppKey" autocomplete="off" class="w-full px-4 py-4 mb-5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-nana-dark/20 text-center text-2xl tracking-[0.3em] font-bold bg-gray-50 focus:bg-white transition-colors" placeholder="">
+            <button onclick="saveAppKey()" class="w-full px-4 py-3 bg-nana-dark text-white rounded-xl font-bold hover:bg-green-800 transition-colors">접속</button>
+        </div>
+    </div>
+
+    <div id="passwordModal" class="fixed inset-0 bg-gray-900/40 backdrop-blur-sm z-[100] hidden flex items-center justify-center opacity-0 transition-opacity p-4">
+        <div class="bg-white rounded-2xl p-6 md:p-8 max-w-sm w-full shadow-2xl transform scale-95 transition-transform" id="passwordModalContent" onclick="event.stopPropagation()">
+            <div class="text-center mb-6">
+                <div class="w-12 h-12 bg-gray-100 text-gray-400 rounded-full flex items-center justify-center mx-auto mb-3 border border-gray-200">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                </div>
+                <h3 class="text-xl font-extrabold text-gray-900 tracking-tight">경영 리포트 잠금 해제</h3>
+                <p class="text-sm font-medium text-gray-500 mt-1">점장 전용 비밀번호를 입력하세요.</p>
+            </div>
+            <input type="password" id="inputAnalyticsPwd" class="w-full px-4 py-4 mb-5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-nana-dark/20 text-center text-2xl tracking-[0.5em] font-bold bg-gray-50 focus:bg-white transition-colors" placeholder="">
+            <div class="flex gap-2">
+                <button onclick="closePasswordModal()" class="flex-1 px-4 py-3 bg-gray-100 text-gray-600 rounded-xl font-bold hover:bg-gray-200 transition-colors">취소</button>
+                <button onclick="verifyAnalyticsPwd()" class="flex-1 px-4 py-3 bg-nana-dark text-white rounded-xl font-bold hover:bg-green-800 transition-colors">확인</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="analyticsModal" class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-[100] hidden flex items-center justify-center opacity-0 transition-opacity duration-300 p-2 md:p-6" onclick="closeAnalyticsModal(event)">
+        <div class="bg-[#F8FAFC] rounded-2xl shadow-popup w-full max-w-5xl h-[95vh] md:h-[90vh] flex flex-col transform scale-95 transition-transform duration-300 overflow-hidden" id="analyticsModalContent" onclick="event.stopPropagation()">
+            <div class="bg-white px-5 md:px-6 py-4 md:py-5 border-b border-gray-200 flex flex-col md:flex-row justify-between items-start md:items-center shrink-0 gap-3">
+                <div>
+                    <h2 class="text-xl md:text-2xl font-black text-gray-900 tracking-tight flex items-center gap-2">
+                        <svg class="w-5 h-5 md:w-6 md:h-6 text-nana-dark" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                        매장 심층 분석 리포트
+                    </h2>
+                    <p class="text-xs md:text-sm text-gray-500 font-medium mt-1">원가, 부가세, 인건비, 고정비를 모두 제외한 실제 마진율 분석</p>
+                </div>
+                <div class="flex items-center gap-3 w-full md:w-auto">
+                    <select id="analyticsMonthSelect" onchange="runAnalytics()" class="flex-1 md:flex-none bg-gray-50 border border-gray-200 text-gray-800 text-sm font-bold rounded-lg focus:ring-nana-dark focus:border-nana-dark p-2.5 outline-none cursor-pointer"></select>
+                    <button onclick="closeAnalyticsModal(true)" class="p-2.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors shrink-0">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 md:space-y-8 custom-scrollbar">
+                <!-- 손익 요약 -->
+                <div>
+                    <h3 class="text-base md:text-lg font-bold text-gray-800 mb-3 md:mb-4 flex items-center gap-2"><span class="w-1.5 h-6 bg-nana-dark rounded-full"></span> 예상 순수익 (Margin) <span id="anaPeriodNote" class="text-xs font-bold text-gray-400 ml-1"></span></h3>
+                    <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden flex flex-col">
+                        <!-- Header: Sales -->
+                        <div class="bg-blue-50/50 p-4 md:p-5 border-b border-blue-100 flex justify-between items-center">
+                            <span class="text-sm md:text-base font-bold text-blue-800" id="anaSalesLabel">월 총 발생 매출</span>
+                            <span class="text-2xl md:text-3xl font-black text-blue-600" id="anaTotalSales">0원</span>
+                        </div>
+                        
+                        <!-- Deductions Grid -->
+                        <div class="p-4 md:p-5">
+                            <div class="flex items-center gap-2 mb-3">
+                                <span class="w-1.5 h-4 bg-red-400 rounded-full"></span>
+                                <h4 class="text-xs md:text-sm font-bold text-gray-700">차감 항목 (지출)</h4>
+                            </div>
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                <div class="p-3 bg-gray-50 rounded-xl border border-gray-100 flex flex-col justify-center">
+                                    <p class="text-[10px] md:text-xs font-bold text-gray-500 mb-1" id="anaCogsLabel">원가</p>
+                                    <p class="text-sm md:text-base font-bold text-gray-800 truncate" id="anaCogs">0원</p>
+                                </div>
+                                <div class="p-3 bg-gray-50 rounded-xl border border-gray-100 flex flex-col justify-center">
+                                    <p class="text-[10px] md:text-xs font-bold text-gray-500 mb-1" id="anaVatLabel">예상 부가세</p>
+                                    <p class="text-sm md:text-base font-bold text-gray-800 truncate" id="anaVat">0원</p>
+                                </div>
+                                <div class="p-3 bg-gray-50 rounded-xl border border-gray-100 flex flex-col justify-center relative group cursor-pointer">
+                                    <div class="flex justify-between items-center mb-1">
+                                        <p class="text-[10px] md:text-xs font-bold text-gray-500" id="anaFixedLabel">고정비 (월세 등)</p>
+                                        <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                    </div>
+                                    <p class="text-sm md:text-base font-bold text-gray-800 truncate" id="anaFixed">-</p>
+                                    <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-40 md:w-48 p-2 md:p-3 bg-gray-800 text-white text-[10px] md:text-xs rounded-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10 shadow-xl pointer-events-none">
+                                        <div id="anaFixedTooltip"></div>
+                                        <div class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-800"></div>
+                                    </div>
+                                </div>
+                                <div class="p-3 bg-gray-50 rounded-xl border border-gray-100 flex flex-col justify-center">
+                                    <p class="text-[10px] md:text-xs font-bold text-gray-500 mb-1">총 인건비</p>
+                                    <p class="text-sm md:text-base font-bold text-gray-800 truncate" id="anaLabor">0원</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Footer: Net Profit -->
+                        <div class="bg-gray-800 p-4 md:p-5 flex justify-between items-center">
+                            <span class="text-xs md:text-sm font-bold text-gray-300">최종 예상 순수익 (마진)</span>
+                            <span class="text-2xl md:text-3xl font-black text-white tracking-tight" id="anaNetProfit">0원</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="text-base md:text-lg font-bold text-gray-800 mb-3 md:mb-4 flex items-center gap-2"><span class="w-1.5 h-6 bg-blue-400 rounded-full"></span> 당월 날씨별 매출 통계 (휴무일 제외)</h3>
+                    <div id="anaWeatherStats" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <!-- JS Rendering -->
+                    </div>
+                </div>
+
+                <!-- [추가] 4단계 분석 강화 -->
+                <div>
+                    <h3 class="text-base md:text-lg font-bold text-gray-800 mb-1 flex items-center gap-2"><span class="w-1.5 h-6 bg-blue-200 rounded-full"></span> 전체 누적 날씨별 매출 (휴무일 제외)</h3>
+                    <p class="text-[11px] md:text-xs text-gray-400 font-medium mb-3 md:mb-4 ml-3.5 break-keep">데이터가 있는 모든 달 기준 · 오후 3시 날씨로 분류</p>
+                    <div id="anaWeatherCumStats" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
+                </div>
+
+                <div>
+                    <h3 class="text-base md:text-lg font-bold text-gray-800 mb-1 flex items-center gap-2"><span class="w-1.5 h-6 bg-purple-400 rounded-full"></span> 요일별 평균 매출</h3>
+                    <p class="text-[11px] md:text-xs text-gray-400 font-medium mb-3 md:mb-4 ml-3.5 break-keep">회색 = 전체 누적 평균 · 초록 = 선택한 달 평균 (휴무일 제외)</p>
+                    <div id="anaDowStats" class="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 md:p-5 space-y-3"></div>
+                </div>
+
+                <div>
+                    <h3 class="text-base md:text-lg font-bold text-gray-800 mb-1 flex items-center gap-2"><span class="w-1.5 h-6 bg-amber-400 rounded-full"></span> 근무자별 매출 기여도 (선택한 달)</h3>
+                    <p class="text-[11px] md:text-xs text-gray-400 font-medium mb-3 md:mb-4 ml-3.5 break-keep">요일 보정 지수 = 그날 매출 ÷ 같은 요일 누적 평균 × 100. 주말 근무가 많아 평균이 높아 보이는 착시를 걷어낸 비교이며, 단독 근무일 지수가 가장 공정한 지표입니다.</p>
+                    <div id="anaWorkerStats" class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-x-auto"></div>
+                </div>
+
+                <div>
+                    <h3 class="text-base md:text-lg font-bold text-gray-800 mb-1 flex items-center gap-2"><span class="w-1.5 h-6 bg-pink-400 rounded-full"></span> 세일·행사 효과 (최근 8건)</h3>
+                    <p class="text-[11px] md:text-xs text-gray-400 font-medium mb-3 md:mb-4 ml-3.5 break-keep">행사 기간 매출을 앞뒤 4주의 같은 요일 평균과 비교 · 명절/휴무 일정 제외</p>
+                    <div id="anaEventStats" class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-x-auto"></div>
+                </div>
+
+                <!-- 인건비 상세 -->
+                <div>
+                    <h3 class="text-base md:text-lg font-bold text-gray-800 mb-3 md:mb-4 flex items-center gap-2"><span class="w-1.5 h-6 bg-nana-dark rounded-full"></span> 직원별 급여 상세 내역</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
+                        <!-- 준호 -->
+                        <div class="bg-white p-4 md:p-5 rounded-2xl shadow-sm border border-gray-200 relative overflow-hidden">
+                            <div class="absolute right-0 top-0 w-16 h-16 bg-blue-50 rounded-bl-[100px] -z-0"></div>
+                            <div class="relative z-10">
+                                <div class="flex justify-between items-center mb-4 border-b border-gray-100 pb-3">
+                                    <h4 class="font-extrabold text-gray-900 text-lg flex items-center gap-2">이준호 <span class="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded font-bold">인센티브제</span></h4>
+                                    <span class="text-sm font-bold text-gray-500" id="anaJhDays">0일 출근</span>
+                                </div>
+                                <div class="space-y-2.5 text-xs md:text-sm">
+                                    <div class="flex justify-between text-gray-600 items-start gap-2"><span class="font-medium break-keep">기본급</span><span class="font-bold shrink-0 text-right" id="anaJhBase">-</span></div>
+                                    <div class="flex justify-between text-gray-600 items-start gap-2"><span class="font-medium break-keep" id="anaJhIncentiveLabel">매출 인센티브</span><span class="font-bold text-nana-dark shrink-0 text-right" id="anaJhIncentive">0 원</span></div>
+                                    <div class="flex justify-between text-gray-600 items-start gap-2"><span class="font-medium break-keep" id="anaJhMealLabel">식대</span><span class="font-bold shrink-0 text-right" id="anaJhMeal">0 원</span></div>
+                                    
+                                    <div class="mt-4 pt-3 border-t border-gray-200">
+                                        <div class="flex justify-between items-center bg-gray-50 p-2.5 rounded-lg border border-gray-100 shadow-sm mb-2">
+                                            <span class="font-bold text-gray-700">세전 총 지급액</span>
+                                            <span class="font-black text-gray-900" id="anaJhGross">0 원</span>
+                                        </div>
+                                        <div class="flex flex-col text-gray-500 text-xs gap-1 border-t border-gray-100 pt-2 mb-2 px-1">
+                                            <div class="flex justify-between"><span class="break-keep">4대보험 (두루누리 적용) 등 공제</span><span class="font-bold text-right" id="anaJhDeduction">-</span></div>
+                                        </div>
+                                        <div class="flex justify-between items-center bg-blue-50 p-3 rounded-xl border border-blue-100 mt-2">
+                                            <span class="font-bold text-gray-800">이준호 실수령액</span>
+                                            <span class="font-black text-blue-600 text-lg" id="anaJhNet">0 원</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 성연 -->
+                        <div class="bg-white p-4 md:p-5 rounded-2xl shadow-sm border border-gray-200 relative overflow-hidden">
+                            <div class="absolute right-0 top-0 w-16 h-16 bg-pink-50 rounded-bl-[100px] -z-0"></div>
+                            <div class="relative z-10">
+                                <div class="flex justify-between items-center mb-4 border-b border-gray-100 pb-3">
+                                    <h4 class="font-extrabold text-gray-900 text-lg flex items-center gap-2 break-keep">호성연 <span class="text-xs bg-pink-100 text-pink-600 px-2 py-0.5 rounded font-bold shrink-0">시급제</span></h4>
+                                    <span class="text-sm font-bold text-gray-500 shrink-0" id="anaSyInfo">0일 / 0시간</span>
+                                </div>
+                                <div class="space-y-2.5 text-xs md:text-sm">
+                                    <div class="flex justify-between text-gray-600 items-start gap-2"><span class="font-medium break-keep" id="anaSyBaseLabel">기본 근로</span><span class="font-bold shrink-0 text-right" id="anaSyBase">0 원</span></div>
+                                    <div class="flex justify-between text-gray-600 items-start gap-2"><span class="font-medium break-keep" id="anaSyHolidayLabel">예상 주휴수당 (주 15시간 이상)</span><span class="font-bold text-nana-dark shrink-0 text-right" id="anaSyHoliday">0 원</span></div>
+                                    <div class="flex justify-between text-gray-600 items-start gap-2"><span class="font-medium break-keep" id="anaSyMealLabel">식대</span><span class="font-bold shrink-0 text-right" id="anaSyMeal">0 원</span></div>
+                                    
+                                    <div class="bg-gray-50 p-3 rounded-xl mt-4 border border-gray-100">
+                                        <div class="flex justify-between text-gray-800 mb-1.5 items-start gap-2"><span class="font-black text-sm break-keep">세전 총 지급액</span><span class="font-black text-sm md:text-base text-gray-900 shrink-0 text-right" id="anaSyTotal">0 원</span></div>
+                                        <div class="flex justify-between text-gray-400 text-xs items-start gap-2"><span class="font-medium break-keep" id="anaSyTaxLabel">세금 공제액</span><span class="font-bold shrink-0 text-right" id="anaSyTax">- 0 원</span></div>
+                                        <div class="flex justify-between text-pink-700 text-sm mt-2 border-t border-gray-200 pt-2 items-start gap-2"><span class="font-extrabold break-keep">호성연 실수령액</span><span class="font-black text-lg shrink-0 text-right" id="anaSyNet">0 원</span></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
+                    <div class="bg-white p-4 md:p-5 rounded-2xl shadow-sm border border-gray-200">
+                        <h3 class="text-base font-bold text-gray-800 mb-1">동기 대비 매출 비교 (YoY)</h3>
+                        <p class="text-xs text-gray-500 font-medium mb-4" id="anaYoyDesc">작년 같은 기간과 매출을 비교합니다.</p>
+                        <div class="space-y-4">
+                            <div>
+                                <div class="flex justify-between text-xs md:text-sm mb-1.5 items-center gap-2"><span class="font-bold text-gray-400 break-keep" id="anaLastYearLabel">작년 0월</span><span class="font-bold text-gray-500 shrink-0" id="anaLastYearVal">0 원</span></div>
+                                <div class="w-full bg-gray-100 rounded-full h-3"><div class="bg-gray-300 h-3 rounded-full" id="anaLastYearBar" style="width: 50%"></div></div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-xs md:text-sm mb-1.5 items-center gap-2"><span class="font-bold text-nana-dark break-keep" id="anaThisYearLabel">올해 0월</span><span class="font-black text-nana-dark shrink-0" id="anaThisYearVal">0 원</span></div>
+                                <div class="w-full bg-gray-100 rounded-full h-3"><div class="bg-nana-dark h-3 rounded-full" id="anaThisYearBar" style="width: 50%"></div></div>
+                            </div>
+                            <div class="pt-3 border-t border-gray-100 text-right flex justify-end" id="anaYoyResult">
+                                <span class="text-sm font-bold bg-gray-100 px-3 py-1.5 rounded-lg break-keep text-right">데이터 없음</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-gradient-to-br from-nana-dark to-gray-900 p-5 rounded-2xl shadow-sm text-white flex flex-col justify-center relative overflow-hidden">
+                        <div class="absolute right-[-20px] bottom-[-20px] opacity-10">
+                            <svg class="w-40 h-40" fill="currentColor" viewBox="0 0 24 24"><path d="M21 21H3v-2h18v2zm0-4H3v-2h18v2zm0-4H3v-2h18v2z"></path></svg>
+                        </div>
+                        <h3 class="text-xs md:text-sm font-bold text-green-200 mb-1 opacity-90">선택월 예상 최종 매출</h3>
+                        <p class="text-2xl md:text-3xl font-black tracking-tight mb-4 md:mb-5" id="anaPredMonth">0 원</p>
+                        <h3 class="text-xs md:text-sm font-bold text-green-200 mb-1 opacity-90">올해 연말 최종 예상 매출</h3>
+                        <p class="text-xl md:text-2xl font-bold tracking-tight" id="anaPredYear">0 원</p>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <div id="customContextMenu" class="absolute hidden bg-white rounded-xl shadow-context border border-gray-100 py-1.5 w-40 z-50 overflow-hidden transform scale-95 opacity-0 transition-all duration-150 origin-top-left">
+        <button onclick="actionEditData()" class="w-full text-left px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 hover:text-nana-dark flex items-center gap-2">
+            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+            매출 수정
+        </button>
+        <button onclick="openEventModal()" class="w-full text-left px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 hover:text-blue-600 flex items-center gap-2">
+            <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+            일정 관리
+        </button>
+        <button onclick="actionDeleteData()" class="w-full text-left px-4 py-2.5 text-sm font-semibold text-red-600 hover:bg-red-50 flex items-center gap-2 border-t border-gray-50">
+            <svg class="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+            매출 삭제
+        </button>
+    </div>
+
+    <div id="eventModal" class="fixed inset-0 bg-gray-900/40 backdrop-blur-sm z-[60] hidden flex items-center justify-center opacity-0 transition-opacity duration-300 p-4">
+        <div class="bg-white rounded-2xl shadow-popup p-6 md:p-7 w-full max-w-md transform scale-95 transition-transform duration-300 flex flex-col max-h-[90vh]" id="eventModalContent" onclick="event.stopPropagation()">
+            <div class="mb-5 flex justify-between items-start border-b border-gray-100 pb-4">
+                <div>
+                    <h3 class="text-xl font-extrabold text-gray-900 tracking-tight">일정 관리</h3>
+                    <p class="text-sm text-gray-500 mt-1 font-medium" id="eventModalDate">2026년 7월 10일</p>
+                </div>
+                <button onclick="closeEventModal()" class="text-gray-400 hover:text-gray-600 p-1.5 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            
+            <div class="flex-grow overflow-y-auto pr-1 custom-scrollbar space-y-5">
+                <div>
+                    <h4 class="text-sm font-bold text-gray-700 mb-2">등록된 일정</h4>
+                    <div id="eventListContainer" class="flex flex-col gap-2 min-h-[40px]"></div>
+                </div>
+
+                <div class="h-px bg-gray-100 w-full"></div>
+
+                <div class="space-y-4 bg-gray-50 p-4 rounded-xl border border-gray-200">
+                    <h4 class="text-sm font-bold text-blue-600 flex items-center gap-1.5" id="eventFormTitle">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        새 일정 추가
+                    </h4>
+                    
+                    <input type="text" id="eventTitle" class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500/20 text-sm font-bold text-gray-800 outline-none" placeholder="일정명을 입력하세요 (예: 여름 세일)">
+                    
+                    <div class="flex flex-col gap-3">
+                        <div class="flex gap-4">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" id="eventIsSingle" checked onchange="toggleEventDateInputs()" class="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer">
+                                <span class="text-sm font-bold text-gray-700">당일 일정</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" id="eventIsYearly" class="w-4 h-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500 cursor-pointer">
+                                <span class="text-sm font-bold text-purple-600">매년 반복</span>
+                            </label>
+                        </div>
+                        
+                        <div id="eventDateRangeGroup" class="flex items-center gap-2 hidden opacity-0 transition-opacity">
+                            <input type="date" id="eventStartDate" class="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-xs font-bold text-gray-800 outline-none">
+                            <span class="text-gray-400 font-bold">~</span>
+                            <input type="date" id="eventEndDate" class="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-xs font-bold text-gray-800 outline-none">
+                        </div>
+                    </div>
+                    
+                    <div class="flex gap-2 pt-2">
+                        <button onclick="saveEvent()" id="btnSaveEvent" class="flex-1 px-4 py-2.5 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-sm transition-all">일정 등록</button>
+                        <button onclick="cancelEditEvent()" id="btnCancelEditEvent" class="hidden px-4 py-2.5 text-sm font-bold text-gray-600 bg-gray-200 hover:bg-gray-300 rounded-xl transition-all">취소</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="workerModal" class="fixed inset-0 bg-gray-900/40 backdrop-blur-sm z-[60] hidden flex items-center justify-center opacity-0 transition-opacity duration-300 p-4">
+        <div class="bg-white rounded-2xl shadow-popup p-6 md:p-7 w-full max-w-md transform scale-95 transition-transform duration-300 flex flex-col max-h-[90vh]" id="workerModalContent" onclick="event.stopPropagation()">
+            <div class="mb-5 flex justify-between items-start border-b border-gray-100 pb-4">
+                <div>
+                    <h3 class="text-xl font-extrabold text-gray-900 tracking-tight">근무자 배정 및 관리</h3>
+                    <p class="text-sm text-gray-500 mt-1 font-medium" id="workerModalDate">2026년 7월 10일</p>
+                </div>
+                <button onclick="closeWorkerModal()" class="text-gray-400 hover:text-gray-600 p-1.5 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            
+            <div class="flex-grow overflow-y-auto pr-1 custom-scrollbar space-y-6">
+                <div>
+                    <h4 class="text-sm font-bold text-gray-700 mb-2">당일 배정된 근무자</h4>
+                    <div id="assignedWorkersContainer" class="flex flex-col gap-2 min-h-[40px]"></div>
+                </div>
+                <div class="h-px bg-gray-100 w-full"></div>
+                <div class="space-y-4 bg-white">
+                    <h4 class="text-sm font-bold text-nana-dark flex items-center gap-1.5" id="workerFormTitle">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        새 근무자 배정
+                    </h4>
+                    <div>
+                        <select id="workerSelect" class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-nana-dark/20 text-sm font-bold text-gray-800 bg-gray-50 outline-none">
+                            <option value="">근무자를 선택하세요</option>
+                        </select>
+                    </div>
+                    <div>
+                        <div class="flex justify-between items-center mb-2">
+                            <label class="block text-sm font-bold text-gray-700">근무 시간</label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" id="workerTimeFull" checked onchange="toggleTimeInputs()" class="w-4 h-4 text-nana-dark rounded border-gray-300 focus:ring-nana-dark cursor-pointer">
+                                <span class="text-sm font-bold text-nana-accent">Full Time</span>
+                            </label>
+                        </div>
+                        <div id="timeInputGroup" class="flex items-center gap-2 opacity-50 pointer-events-none transition-opacity">
+                            <input type="time" id="workerStartTime" value="10:30" class="flex-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm font-bold text-gray-800 outline-none focus:border-nana-dark">
+                            <span class="text-gray-400 font-bold">~</span>
+                            <input type="time" id="workerEndTime" value="20:30" class="flex-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm font-bold text-gray-800 outline-none focus:border-nana-dark">
+                        </div>
+                    </div>
+                    <div class="flex gap-2 pt-2">
+                        <button onclick="saveWorkerAssignment()" id="btnSaveWorkerForm" class="flex-1 px-4 py-3 text-sm font-bold text-white bg-nana-dark hover:bg-green-800 rounded-xl shadow-sm transition-all active:scale-95">배정 추가</button>
+                        <button onclick="cancelEditWorker()" id="btnCancelEditWorker" class="hidden px-4 py-3 text-sm font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-all">취소</button>
+                    </div>
+                </div>
+                <div class="h-px bg-gray-100 w-full"></div>
+                <div class="bg-gray-50 p-4 rounded-xl border border-gray-200">
+                    <h4 class="text-sm font-bold text-gray-700 mb-3">전체 근무자 명단 (추가/삭제)</h4>
+                    <div class="flex gap-2 mb-3 flex-col md:flex-row">
+                        <input type="text" id="newWorkerName" class="flex-grow px-3 py-2 rounded-lg border border-gray-200 text-sm font-bold text-gray-800 outline-none focus:border-nana-dark" placeholder="새 근무자 이름 입력">
+                        <button onclick="addWorkerToList()" class="px-4 py-2 text-sm font-bold text-white bg-gray-800 hover:bg-gray-900 rounded-lg transition-colors whitespace-nowrap">등록</button>
+                    </div>
+                    <div id="workerListContainer" class="flex flex-wrap gap-2"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- [추가] 매장 설정 모달: 기본 근무 스케줄 자동 배정 / 요일별 기본 스케줄 / 월별 목표 매출 -->
+    <div id="settingsModal" class="fixed inset-0 bg-gray-900/40 backdrop-blur-sm z-[60] hidden flex items-center justify-center opacity-0 transition-opacity duration-300 p-4">
+        <div class="bg-white rounded-2xl shadow-popup p-6 md:p-7 w-full max-w-lg transform scale-95 transition-transform duration-300 flex flex-col max-h-[90vh]" id="settingsModalContent" onclick="event.stopPropagation()">
+            <div class="mb-5 flex justify-between items-start border-b border-gray-100 pb-4">
+                <div>
+                    <h3 class="text-xl font-extrabold text-gray-900 tracking-tight">매장 설정</h3>
+                    <p class="text-sm text-gray-500 mt-1 font-medium" id="settingsModalMonth">2026년 10월 기준</p>
+                </div>
+                <button onclick="closeSettingsModal()" class="text-gray-400 hover:text-gray-600 p-1.5 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+
+            <div class="flex-grow overflow-y-auto pr-1 custom-scrollbar space-y-5">
+                <div class="bg-green-50 p-4 rounded-xl border border-green-100">
+                    <h4 class="text-sm font-extrabold text-nana-dark mb-1">기본 스케줄로 한 달 자동 배정</h4>
+                    <p class="text-xs font-medium text-gray-600 mb-3 break-keep">아래 요일별 기본 스케줄대로 근무자를 한 번에 배정합니다. 일정에 '휴무'가 들어간 날은 건너뜁니다. 바뀐 날만 근무자 메뉴에서 고치면 됩니다.</p>
+                    <label class="flex items-center gap-2 cursor-pointer mb-3">
+                        <input type="checkbox" id="scheduleOverwrite" class="w-4 h-4 text-nana-dark rounded border-gray-300 focus:ring-nana-dark cursor-pointer">
+                        <span class="text-xs md:text-sm font-bold text-gray-700">이미 배정된 날도 덮어쓰기</span>
+                    </label>
+                    <button onclick="applyScheduleToMonth()" id="btnApplySchedule" class="w-full px-4 py-3 text-sm font-bold text-white bg-nana-dark hover:bg-green-800 rounded-xl shadow-sm transition-all">이번 달 근무 자동 배정</button>
+                </div>
+
+                <div>
+                    <h4 class="text-sm font-bold text-gray-700 mb-1">요일별 기본 근무 스케줄</h4>
+                    <p class="text-[11px] md:text-xs font-medium text-gray-400 mb-3 break-keep">형식: 이름(Full), 이름(10:30~17:30) · 근무가 없는 요일은 비워두세요</p>
+                    <div id="scheduleInputs" class="flex flex-col gap-2"></div>
+                </div>
+
+                <div class="h-px bg-gray-100 w-full"></div>
+
+                <div>
+                    <h4 class="text-sm font-bold text-gray-700 mb-3">월별 목표 매출</h4>
+                    <div class="flex flex-col gap-2.5">
+                        <div class="flex items-center gap-2">
+                            <span class="w-36 text-xs md:text-sm font-bold text-gray-600 shrink-0" id="settingsMonthTargetLabel">2026년 10월 목표</span>
+                            <input type="text" inputmode="numeric" id="settingsMonthTarget" class="flex-1 min-w-0 px-3 py-2 rounded-lg border border-gray-200 text-sm font-bold text-gray-800 outline-none focus:border-nana-dark text-right" placeholder="기본 목표 적용">
+                            <span class="text-sm font-bold text-gray-400">원</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-36 text-xs md:text-sm font-bold text-gray-600 shrink-0">기본 목표 (미지정 달)</span>
+                            <input type="text" inputmode="numeric" id="settingsDefaultTarget" class="flex-1 min-w-0 px-3 py-2 rounded-lg border border-gray-200 text-sm font-bold text-gray-800 outline-none focus:border-nana-dark text-right">
+                            <span class="text-sm font-bold text-gray-400">원</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-gray-50 p-4 rounded-xl border border-gray-200">
+                    <h4 class="text-sm font-bold text-gray-700 mb-1">스케줄·목표 저장 (점장 전용)</h4>
+                    <p class="text-[11px] md:text-xs font-medium text-gray-400 mb-3 break-keep">저장하면 모든 기기에 바로 적용됩니다. 자동 배정은 저장하지 않아도 지금 화면의 스케줄로 실행됩니다.</p>
+                    <div class="flex gap-2 flex-col md:flex-row">
+                        <input type="password" id="settingsAdminPwd" autocomplete="off" class="flex-grow px-3 py-2.5 rounded-lg border border-gray-200 text-sm font-bold text-gray-800 outline-none focus:border-nana-dark" placeholder="리포트 비밀번호">
+                        <button onclick="saveSettingsFromModal()" id="btnSaveSettings" class="px-5 py-2.5 text-sm font-bold text-white bg-gray-800 hover:bg-gray-900 rounded-lg transition-colors whitespace-nowrap">설정 저장</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="monthPickerModal" class="fixed inset-0 bg-gray-900/40 backdrop-blur-sm z-[60] hidden flex items-center justify-center opacity-0 transition-opacity duration-300 p-4">
+        <div class="bg-white rounded-2xl shadow-popup p-6 w-full max-w-sm transform scale-95 transition-transform duration-300" id="monthPickerContent" onclick="event.stopPropagation()">
+            <div class="flex justify-between items-center mb-5">
+                <h3 class="text-lg font-bold text-gray-900" id="pickerYearDisplay">2026년</h3>
+                <div class="flex gap-2">
+                    <button onclick="changePickerYear(-1)" class="p-1.5 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors">&lsaquo;</button>
+                    <button onclick="changePickerYear(1)" class="p-1.5 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors">&rsaquo;</button>
+                </div>
+            </div>
+            <div class="grid grid-cols-3 gap-2 md:gap-3">
+                <div id="pickerMonthsGrid" class="col-span-3 grid grid-cols-3 gap-2 md:gap-3"></div>
+            </div>
+            <div class="mt-6 flex justify-end">
+                <button onclick="closeMonthPicker()" class="px-4 py-2 text-sm font-semibold text-gray-500 hover:bg-gray-100 rounded-xl transition-colors">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <header class="bg-nana-dark text-white shadow-md relative z-10">
+        <div class="w-full px-4 md:px-6 lg:px-12 py-3 md:py-4 flex flex-wrap gap-3 justify-between items-center">
+            <h1 class="font-extrabold text-xl md:text-2xl tracking-tight flex items-center gap-2 whitespace-nowrap">
+                NANA's Bedding Bono <span class="text-green-300/60 text-xs md:text-sm font-medium tracking-normal hidden sm:inline ml-2 border-l border-green-700 pl-3">Sales Dashboard</span>
+            </h1>
+            <div class="flex items-center space-x-2 md:space-x-5">
+                <div class="flex items-center space-x-1 md:space-x-2 bg-white/10 px-1 md:px-2 py-1.5 rounded-full backdrop-blur-sm border border-white/10">
+                    <button onclick="changeMonth(-1)" class="hover:text-nana-gold transition-colors text-lg md:text-xl px-2 md:px-3 font-light">&lsaquo;</button>
+                    <button onclick="openMonthPicker()" id="monthDisplay" class="text-base md:text-lg font-bold min-w-[80px] md:min-w-[100px] text-center tracking-wide hover:text-nana-gold transition-colors px-1 md:px-2 rounded-lg hover:bg-white/10 cursor-pointer">
+                        2026. 07
+                    </button>
+                    <button onclick="changeMonth(1)" class="hover:text-nana-gold transition-colors text-lg md:text-xl px-2 md:px-3 font-light">&rsaquo;</button>
+                </div>
+                
+                <div class="flex items-center space-x-2">
+                    <button onclick="openGoogleSheet()" class="flex items-center space-x-1.5 bg-white/10 hover:bg-white text-white hover:text-nana-dark px-3 md:px-4 py-2 rounded-full text-xs md:text-sm font-semibold transition-all border border-white/20 hover:border-transparent whitespace-nowrap">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        <span class="hidden sm:inline">구글 시트</span>
+                    </button>
+                    <button onclick="openSettingsModal()" class="flex items-center justify-center bg-white/10 hover:bg-white text-white hover:text-nana-dark w-9 h-9 md:w-10 md:h-10 rounded-full transition-all border border-white/20 hover:border-transparent" title="매장 설정 (목표 매출·기본 근무 스케줄)">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                    </button>
+                    <button onclick="openAnalyticsPassword()" class="flex items-center justify-center bg-white/10 hover:bg-white text-white hover:text-nana-dark w-9 h-9 md:w-10 md:h-10 rounded-full transition-all border border-white/20 hover:border-transparent" title="경영 분석 리포트 (관리자용)">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"></path></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="w-full px-4 md:px-6 lg:px-12 py-6 md:py-8">
+        <!-- 상단 요약 카드 -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5 mb-6 md:mb-8">
+            <div class="bg-white rounded-2xl shadow-card p-5 md:p-6 border border-gray-100 flex flex-col justify-between">
+                <p class="text-xs md:text-sm text-gray-500 font-semibold mb-2 flex items-center gap-1.5 whitespace-nowrap">
+                    <span class="w-2 h-2 rounded-full bg-gray-300"></span> 월별 목표 매출
+                </p>
+                <p class="text-2xl md:text-3xl font-bold text-gray-900 tracking-tight whitespace-nowrap" id="cardTarget">50,000,000 <span class="text-xs md:text-sm font-medium text-gray-500">원</span></p>
+            </div>
+            <div class="bg-white rounded-2xl shadow-card p-5 md:p-6 border border-gray-100 flex flex-col justify-between relative overflow-hidden">
+                <div class="absolute right-0 top-0 w-24 h-24 bg-blue-50 rounded-bl-full -z-0"></div>
+                <div class="relative z-10 flex flex-col h-full justify-between">
+                    <div class="flex justify-between items-start mb-2">
+                        <p class="text-xs md:text-sm text-gray-500 font-semibold flex items-center gap-1.5 whitespace-nowrap">
+                            <span class="w-2 h-2 rounded-full bg-blue-500"></span> 당월 누적
+                            <span id="progressPercent" class="text-blue-600 font-bold ml-1 bg-blue-50 px-2 py-0.5 rounded text-[10px] md:text-xs">0%</span>
+                        </p>
+                        <div id="cardYoY" class="text-[10px] md:text-xs font-bold px-2 py-1 rounded bg-gray-50 border border-gray-100 shadow-sm whitespace-nowrap">-</div>
+                    </div>
+                    <p class="text-2xl md:text-3xl font-bold text-gray-900 tracking-tight whitespace-nowrap" id="cardTotal">0 <span class="text-xs md:text-sm font-medium text-gray-500">원</span></p>
+                </div>
+            </div>
+            <div class="bg-white rounded-2xl shadow-card p-5 md:p-6 border border-gray-100 flex flex-col justify-between relative overflow-hidden">
+                <div class="absolute right-0 top-0 w-24 h-24 bg-purple-50 rounded-bl-full -z-0"></div>
+                <div class="relative z-10">
+                    <p class="text-xs md:text-sm text-gray-500 font-semibold mb-2 flex items-center gap-1.5 whitespace-nowrap">
+                        <span class="w-2 h-2 rounded-full bg-purple-400"></span> 현재 궤도 예상 월매출
+                    </p>
+                    <p class="text-2xl md:text-3xl font-bold text-gray-900 tracking-tight whitespace-nowrap" id="cardExpected">0 <span class="text-xs md:text-sm font-medium text-gray-500">원</span></p>
+                </div>
+            </div>
+            <div class="bg-nana-dark text-white rounded-2xl shadow-soft p-5 md:p-6 flex flex-col justify-between">
+                <p class="text-xs md:text-sm text-green-100 font-semibold mb-2 flex items-center gap-1.5 whitespace-nowrap">
+                    <span class="w-2 h-2 rounded-full bg-nana-gold"></span> 달성까지 남은 목표액
+                </p>
+                <p class="text-2xl md:text-3xl font-bold tracking-tight whitespace-nowrap" id="cardRemaining">0 <span class="text-xs md:text-sm font-medium text-green-200">원</span></p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 md:gap-8">
+            <!-- 좌측 달력 영역 -->
+            <div class="lg:col-span-3 bg-white rounded-2xl shadow-soft p-4 md:p-7 border border-gray-100 flex flex-col">
+                <div class="flex justify-between items-center mb-4 md:mb-6">
+                    <h3 class="text-lg md:text-xl font-bold text-gray-800 tracking-tight flex items-center gap-2 md:gap-3">
+                        매출 달력
+                    </h3>
+                    <div class="flex gap-2 md:gap-3">
+                        <span class="text-[10px] md:text-xs font-medium text-gray-500 flex items-center gap-1"><span class="w-1.5 h-1.5 md:w-2 md:h-2 bg-nana-dark rounded-full"></span>달성</span>
+                        <span class="text-[10px] md:text-xs font-medium text-gray-500 flex items-center gap-1"><span class="w-1.5 h-1.5 md:w-2 md:h-2 bg-green-200 rounded-full"></span>미달</span>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-7 gap-1.5 md:gap-3 text-center mb-2 md:mb-3">
+                    <div class="text-red-500 font-extrabold text-[10px] md:text-sm tracking-wider">SUN</div>
+                    <div class="text-gray-400 font-bold text-[10px] md:text-sm tracking-wider">MON</div>
+                    <div class="text-gray-400 font-bold text-[10px] md:text-sm tracking-wider">TUE</div>
+                    <div class="text-gray-400 font-bold text-[10px] md:text-sm tracking-wider">WED</div>
+                    <div class="text-gray-400 font-bold text-[10px] md:text-sm tracking-wider">THU</div>
+                    <div class="text-gray-400 font-bold text-[10px] md:text-sm tracking-wider">FRI</div>
+                    <div class="text-blue-500 font-extrabold text-[10px] md:text-sm tracking-wider">SAT</div>
+                </div>
+                
+                <!-- 캘린더 그리드 -->
+                <div id="calendarGrid" class="grid grid-cols-7 gap-1.5 md:gap-3 flex-1 min-h-[500px] md:min-h-[650px]"></div>
+
+                <!-- 하단 듀얼 차트 영역 -->
+                <div class="mt-8 md:mt-12 pt-6 md:pt-8 border-t border-gray-100">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
+                        <div>
+                            <h3 class="text-base md:text-lg font-bold mb-4 text-gray-800 tracking-tight" id="dailyChartTitle">당월 일별 달성 추이</h3>
+                            <div class="relative h-[200px] md:h-[250px] w-full"> 
+                                <canvas id="dailyChartCanvas"></canvas>
+                            </div>
+                        </div>
+                        <div>
+                            <h3 class="text-base md:text-lg font-bold mb-4 text-gray-800 tracking-tight" id="yearlyChartTitle">2026년 월별 매출 추이</h3>
+                            <div class="relative h-[200px] md:h-[250px] w-full"> 
+                                <canvas id="yearlyChartCanvas"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 우측 입력 영역 -->
+            <div class="lg:col-span-1 bg-white rounded-2xl shadow-soft p-5 md:p-7 border border-gray-100 flex flex-col relative self-start lg:sticky lg:top-6 order-first lg:order-last mb-6 lg:mb-0">
+                <!-- [추가] 2026년 9~10월 POS 데이터 일괄 반영 배너 (반영 완료 시 자동 숨김) -->
+                <div id="seedImportBanner" class="hidden mb-5 p-4 rounded-xl border border-amber-200 bg-amber-50">
+                    <div class="flex justify-between items-start gap-2 mb-1">
+                        <p class="text-sm font-extrabold text-amber-800">9~10월 POS 매출·근무 반영 대기</p>
+                        <button onclick="dismissSeedImport()" class="text-[11px] font-bold text-amber-600 hover:text-amber-800 shrink-0">닫기</button>
+                    </div>
+                    <p class="text-xs font-medium text-amber-700 mb-3 whitespace-pre-line" id="seedImportDesc"></p>
+                    <button id="btnSeedImport" onclick="applySeedImport()" class="w-full px-4 py-2.5 text-sm font-bold text-white bg-amber-600 hover:bg-amber-700 rounded-xl transition-all">구글 시트에 일괄 반영</button>
+                </div>
+
+                <div class="mb-5 md:mb-6 pb-4 md:pb-5 border-b border-gray-100 flex flex-col gap-3">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-xl md:text-2xl font-extrabold text-gray-900 tracking-tight whitespace-nowrap" id="selectedDateDisplay">날짜 선택</h3>
+                        <button onclick="openWorkerModal()" class="text-xs md:text-sm font-bold text-gray-500 hover:text-nana-dark flex items-center gap-1 px-2 py-1 md:px-2.5 md:py-1.5 rounded-lg hover:bg-green-50 transition-colors border border-transparent hover:border-green-100 shrink-0">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg> 근무자
+                        </button>
+                    </div>
+                    <div id="workerDisplayBadgeContainer" class="flex flex-wrap gap-1.5 min-h-[28px]"></div>
+                </div>
+
+                <div class="mb-6 md:mb-8">
+                    <label class="block text-xs md:text-sm font-bold text-gray-700 mb-2">당일 발생 매출 입력 (원)</label>
+                    <div class="flex flex-col space-y-2 md:space-y-3">
+                        <div class="relative">
+                            <input type="text" inputmode="numeric" id="inputDailySales" class="w-full px-4 py-3 md:px-5 md:py-4 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-nana-dark/20 focus:border-nana-dark text-lg md:text-xl font-bold text-gray-800 transition-all shadow-inner bg-gray-50 focus:bg-white placeholder:font-normal placeholder:text-sm md:placeholder:text-base placeholder:text-gray-400" placeholder="매출액을 입력하세요">
+                            <span class="absolute right-4 md:right-5 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-sm md:text-base">원</span>
+                        </div>
+                        <div class="flex space-x-2">
+                            <button onclick="saveDailySales()" id="btnSave" class="flex-1 bg-nana-dark text-white px-4 py-3 md:py-3.5 rounded-xl font-bold text-sm hover:bg-green-800 hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all whitespace-nowrap">데이터 저장</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-2 space-y-2 md:space-y-3 flex flex-col">
+                    <div class="bg-gray-50 p-3 md:p-4 rounded-xl border border-gray-100 flex justify-between items-center transition-all hover:bg-gray-100/50">
+                        <p class="text-xs md:text-sm text-gray-500 font-semibold whitespace-nowrap">현재까지 누적 매출</p>
+                        <p class="text-sm md:text-base font-bold text-gray-800 whitespace-nowrap" id="detailPrevSales">0 원</p>
+                    </div>
+                    <div class="bg-indigo-50/50 p-3 md:p-4 rounded-xl border border-indigo-100 flex justify-between items-center transition-all">
+                        <p class="text-xs md:text-sm text-indigo-600 font-bold whitespace-nowrap">오늘까지 일평균 매출</p>
+                        <p class="text-sm md:text-base font-extrabold text-indigo-700 whitespace-nowrap" id="detailAvgToToday">0 원</p>
+                    </div>
+                    <div class="bg-orange-50/50 p-3 md:p-4 rounded-xl border border-orange-100 flex justify-between items-center transition-all">
+                        <p class="text-xs md:text-sm text-nana-accent font-bold whitespace-nowrap">오늘 꼭 팔아야 할 목표액</p>
+                        <p class="text-base md:text-lg font-extrabold text-nana-accent tracking-tight whitespace-nowrap" id="detailTodayTarget">0 원</p>
+                    </div>
+                    <div class="bg-gray-50 p-3 md:p-4 rounded-xl border border-gray-100 flex justify-between items-center transition-all" id="boxPace">
+                        <p class="text-xs md:text-sm text-gray-500 font-semibold whitespace-nowrap">당일 매출 페이스</p>
+                        <p class="text-sm md:text-base font-bold text-gray-800 whitespace-nowrap" id="detailPaceDiff">0 원</p>
+                    </div>
+                    <div class="bg-nana-light p-4 md:p-5 rounded-xl border border-green-200 mt-2">
+                        <p class="text-xs md:text-sm text-nana-dark font-bold mb-1 md:mb-1.5 opacity-80 whitespace-nowrap">내일부터 필요한 일평균 매출</p>
+                        <p class="text-xl md:text-2xl font-black text-nana-dark tracking-tight whitespace-nowrap" id="detailNextDaily">0 <span class="text-sm md:text-base font-bold">원</span></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const GOOGLE_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbw4MzcCPQIJF72aHdhOq7_Tzc0gSqhR_W4dKUZlRlUUJPyNMLnw-hK8YMQOge2F_ZlO/exec'; 
+        const GOOGLE_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1PF3Qsyz_41W-HcOED3JhpKUu3oHROnu96mCe5qBv5_o/edit?gid=0#gid=0'; 
+        const TARGET_SALES = 50000000; // 기본 목표 (설정에서 월별 목표/기본 목표를 정하지 않은 경우)
+        
+        let currentDate = new Date(); 
+        let displayYear = currentDate.getFullYear();
+        let displayMonth = currentDate.getMonth(); 
+        let selectedDay = currentDate.getDate();
+        
+        let pickerYear = displayYear;
+        let salesData = {};
+        let isFetching = true;
+        let yearlyChart = null;
+        let dailyChart = null; 
+        let contextMenuDay = null;
+
+        let eventsList = []; // 로컬 스토리지가 아닌 시트 데이터 기반으로 동적 생성됨
+        let workerList = []; 
+        let dailyWorkers = {}; 
+        let editingWorkerId = null; 
+        const WORKER_COLORS = ['#3b82f6', '#ec4899', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4', '#6366f1', '#14b8a6', '#ef4444'];
+        const EVENT_COLORS = ['#f87171', '#fb923c', '#fbbf24', '#a3e635', '#34d399', '#22d3ee', '#818cf8', '#c084fc', '#f472b6'];
+
+        let editingEventId = null;
+        let weatherCache = {};
+
+        // [추가] 보안: 접속 PIN은 기기에만 저장, 리포트 계산 상수는 비밀번호 확인 후 서버에서 받아 메모리에만 보관
+        const APP_KEY_STORAGE = 'nanas_app_key';
+        let appKeyMemory = '';
+        let adminConfig = null;
+
+        // [수정] 소수점 금액이 "1,234,567.5원"처럼 노출되지 않도록 항상 원 단위 반올림
+        const formatKrw = (num) => Math.round(Number(num) || 0).toLocaleString('ko-KR');
+        const getDateString = (y, m, d) => `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+
+        // [추가] 일정명·근무자명에 특수문자(<, >, ", ')가 있어도 화면이 깨지지 않도록 이스케이프
+        const escapeHtml = (str) => String(str ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
+        // [추가] 구글 앱스 스크립트 호출 시 서버 오류(HTTP 오류)를 감지해 "저장 완료" 오표시 방지
+        // [수정] 모든 요청에 접속 PIN(key)을 붙이고, 서버가 거부하면 PIN 입력창을 다시 띄움
+        async function gasFetch(url) {
+            const fullUrl = url + (url.includes('?') ? '&' : '?') + 'key=' + encodeURIComponent(getAppKey());
+            const res = await fetch(fullUrl);
+            if (!res.ok) throw new Error('GAS 응답 오류: ' + res.status);
+            let data = null;
+            try { data = await res.clone().json(); } catch (e) { data = null; }
+            if (data && data.error === 'unauthorized') {
+                clearAppKey();
+                openAppKeyModal('PIN이 올바르지 않습니다. 다시 입력해주세요.');
+                throw new Error('unauthorized');
+            }
+            if (data && data.error === 'busy') throw new Error('서버가 다른 저장을 처리 중입니다.');
+            return res;
+        }
+
+        function getAppKey() {
+            try { return localStorage.getItem(APP_KEY_STORAGE) || appKeyMemory; } catch (e) { return appKeyMemory; }
+        }
+        function clearAppKey() {
+            appKeyMemory = '';
+            try { localStorage.removeItem(APP_KEY_STORAGE); } catch (e) {}
+        }
+        function openAppKeyModal(message) {
+            const modal = document.getElementById('appKeyModal');
+            const content = document.getElementById('appKeyModalContent');
+            const errEl = document.getElementById('appKeyError');
+            const input = document.getElementById('inputAppKey');
+            if (message) { errEl.innerText = message; errEl.classList.remove('hidden'); } else { errEl.classList.add('hidden'); }
+            input.value = '';
+            modal.classList.remove('hidden');
+            setTimeout(() => { modal.classList.remove('opacity-0'); content.classList.remove('scale-95'); input.focus(); }, 10);
+        }
+        function closeAppKeyModal() {
+            const modal = document.getElementById('appKeyModal');
+            const content = document.getElementById('appKeyModalContent');
+            modal.classList.add('opacity-0'); content.classList.add('scale-95');
+            setTimeout(() => { modal.classList.add('hidden'); }, 200);
+        }
+        async function saveAppKey() {
+            const val = document.getElementById('inputAppKey').value.trim();
+            if (!val) return;
+            appKeyMemory = val;
+            try { localStorage.setItem(APP_KEY_STORAGE, val); } catch (e) {}
+            closeAppKeyModal();
+            isFetching = true; renderCalendar();
+            await loadDataFromGoogleSheet();
+        }
+
+        Chart.defaults.font.family = "'Pretendard', sans-serif";
+        Chart.defaults.color = '#64748b';
+
+        // UI Helpers
+        function uiAlert(message) {
+            document.getElementById('uiAlertMessage').innerText = message;
+            const modal = document.getElementById('uiAlertModal');
+            const box = document.getElementById('uiAlertBox');
+            modal.classList.remove('hidden');
+            setTimeout(() => { modal.classList.remove('opacity-0'); box.classList.remove('scale-95'); }, 10);
+        }
+        function closeUiAlert() {
+            const modal = document.getElementById('uiAlertModal');
+            const box = document.getElementById('uiAlertBox');
+            modal.classList.add('opacity-0'); box.classList.add('scale-95');
+            setTimeout(() => { modal.classList.add('hidden'); }, 200);
+        }
+
+        // [수정] 확인 버튼 문구/색상을 지정할 수 있도록 확장 (기본값은 기존과 동일한 빨간 '삭제' 버튼)
+        function uiConfirm(message, onConfirm, okLabel = '삭제', okClass = 'flex-1 px-4 py-3 bg-red-500 text-white rounded-xl font-bold hover:bg-red-600 transition-colors') {
+            document.getElementById('uiConfirmMessage').innerText = message;
+            const modal = document.getElementById('uiConfirmModal');
+            const box = document.getElementById('uiConfirmBox');
+            const btnCancel = document.getElementById('btnUiConfirmCancel');
+            const btnOk = document.getElementById('btnUiConfirmOk');
+            btnOk.innerText = okLabel;
+            btnOk.className = okClass;
+            
+            btnCancel.onclick = closeUiConfirm;
+            btnOk.onclick = () => { closeUiConfirm(); onConfirm(); };
+            
+            modal.classList.remove('hidden');
+            setTimeout(() => { modal.classList.remove('opacity-0'); box.classList.remove('scale-95'); }, 10);
+        }
+        function closeUiConfirm() {
+            const modal = document.getElementById('uiConfirmModal');
+            const box = document.getElementById('uiConfirmBox');
+            modal.classList.add('opacity-0'); box.classList.add('scale-95');
+            setTimeout(() => { modal.classList.add('hidden'); }, 200);
+        }
+
+        function openGoogleSheet() { window.open(GOOGLE_SHEET_URL, '_blank'); }
+
+        async function loadDataFromGoogleSheet() {
+            // [추가] 이 기기에 접속 PIN이 없으면 먼저 입력받음
+            if (!getAppKey()) {
+                isFetching = false;
+                loadLocalData();
+                renderCalendar();
+                openAppKeyModal();
+                return;
+            }
+            try {
+                const response = await gasFetch(GOOGLE_WEB_APP_URL + '?action=read');
+                salesData = await response.json();
+                // [수정] 시트에 근무자/일정만 있고 매출이 빈칸인 날은 sales가 null로 옴 → '미입력'으로 정규화
+                Object.keys(salesData).forEach(k => {
+                    if (salesData[k] && (salesData[k].sales === null || salesData[k].sales === '')) delete salesData[k].sales;
+                });
+                await loadSettings(); // [추가] 월별 목표·기본 스케줄
+            } catch (error) {
+                console.error("데이터 로딩 실패:", error);
+            } finally {
+                isFetching = false;
+                loadLocalData(); 
+                syncWorkersFromSheet(); // [추가] 시트 D열 근무자 → 앱 반영
+                ensureWorkerListFromRecords(); // [추가] 새 기기·새 주소에서도 근무자 명단 자동 구성
+                parseEventsFromData(); // 시트 데이터 기반 일정 파싱
+                await fetchWeather(displayYear, displayMonth);
+                renderCalendar();
+            }
+        }
+
+        // ===== [추가] 근무자 문자열 처리 (시트 D열 형식: "이준호(Full), 호성연(10:30~17:30)") =====
+        function workerToString(list) {
+            return (list || []).map(w => `${w.name}(${w.time})`).join(', ');
+        }
+
+        function getWorkerColor(name) {
+            const found = workerList.find(w => w.name === name);
+            if (found) return found.color;
+            let hash = 0;
+            for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+            return WORKER_COLORS[Math.abs(hash) % WORKER_COLORS.length];
+        }
+
+        function parseWorkerString(raw) {
+            return String(raw).split(',').map(s => s.trim()).filter(Boolean).map((part, idx) => {
+                const m = part.match(/^(.+?)\s*\((.+)\)$/);
+                const name = m ? m[1].trim() : part;
+                const time = m ? m[2].trim() : 'Full';
+                return { id: 'w_' + Date.now() + '_' + idx + '_' + Math.floor(Math.random() * 1000), name, time, color: getWorkerColor(name) };
+            });
+        }
+
+        // [추가] 시트 read 응답에 근무자 값(worker 또는 workers 필드)이 있으면 시트 값을 우선 반영.
+        // 시트가 비어 있는 날짜는 기존 로컬 기록을 그대로 유지(덮어쓰지 않음).
+        function syncWorkersFromSheet() {
+            let changed = false;
+            Object.keys(salesData).forEach(dateStr => {
+                if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return;
+                const row = salesData[dateStr] || {};
+                const raw = row.worker ?? row.workers;
+                if (typeof raw !== 'string' || raw.trim() === '') return;
+                const parsed = parseWorkerString(raw);
+                if (parsed.length === 0) return;
+                if (workerToString(dailyWorkers[dateStr]) !== workerToString(parsed)) {
+                    dailyWorkers[dateStr] = parsed;
+                    changed = true;
+                }
+            });
+            if (changed) saveWorkersToStorage();
+        }
+
+        // [추가] 근무자 명단(기기 저장)이 비어 있어도 최근 60일 이후 근무 기록에 있는 이름으로 명단을 채움
+        function ensureWorkerListFromRecords() {
+            const since = new Date(); since.setDate(since.getDate() - 60);
+            const sinceStr = getDateString(since.getFullYear(), since.getMonth(), since.getDate());
+            let changed = false;
+            Object.keys(dailyWorkers).filter(ds => ds >= sinceStr).sort().forEach(ds => {
+                (dailyWorkers[ds] || []).forEach(w => {
+                    if (w && w.name && !workerList.some(x => x.name === w.name)) {
+                        workerList.push({ name: w.name, color: WORKER_COLORS[workerList.length % WORKER_COLORS.length] });
+                        changed = true;
+                    }
+                });
+            });
+            if (changed) saveWorkersToStorage();
+        }
+
+        // 시트의 E열 텍스트를 분석하여 캘린더용 일정 객체(eventsList)로 조립
+        function parseEventsFromData() {
+            eventsList = [];
+            const sortedDates = Object.keys(salesData).filter(k => k.match(/^\d{4}-\d{2}-\d{2}$/)).sort();
+
+            sortedDates.forEach(dateStr => {
+                const evText = salesData[dateStr].event;
+                if (!evText) return;
+
+                let title = evText;
+
+                // 일정 이름 기반으로 고정된 컬러 해시 생성
+                let hash = 0;
+                for (let i = 0; i < title.length; i++) hash = title.charCodeAt(i) + ((hash << 5) - hash);
+                const color = EVENT_COLORS[Math.abs(hash) % EVENT_COLORS.length];
+
+                const prevDate = new Date(dateStr);
+                prevDate.setDate(prevDate.getDate() - 1);
+                const prevDateStr = getDateString(prevDate.getFullYear(), prevDate.getMonth(), prevDate.getDate());
+
+                // 바로 전날 동일한 이름의 일정이 있었다면 기간 연장으로 취급
+                const existingEv = eventsList.find(e => e.rawTitle === evText && e.endDate === prevDateStr);
+
+                if (existingEv) {
+                    existingEv.endDate = dateStr;
+                    existingEv.isSingle = false;
+                } else {
+                    eventsList.push({
+                        id: 'e_' + dateStr + '_' + hash,
+                        rawTitle: evText,
+                        title: title,
+                        isSingle: true,
+                        startDate: dateStr,
+                        endDate: dateStr,
+                        color: color
+                    });
+                }
+            });
+        }
+
+        function loadLocalData() {
+            try {
+                const wListStored = localStorage.getItem('nanas_worker_list');
+                if (wListStored) workerList = JSON.parse(wListStored);
+                
+                const wDailyStored = localStorage.getItem('nanas_daily_workers');
+                if (wDailyStored) { dailyWorkers = JSON.parse(wDailyStored); }
+                
+                const weatherStored = localStorage.getItem('nanas_weather');
+                if (weatherStored) weatherCache = JSON.parse(weatherStored);
+            } catch (e) { console.error("로컬 데이터 로딩 실패", e); }
+        }
+
+        function saveWorkersToStorage() {
+            localStorage.setItem('nanas_worker_list', JSON.stringify(workerList));
+            localStorage.setItem('nanas_daily_workers', JSON.stringify(dailyWorkers));
+        }
+
+        function saveEventsToStorage() {
+            localStorage.setItem('nanas_events_list', JSON.stringify(eventsList));
+        }
+
+        // ===== [추가] 매장 설정 (월별 목표 매출 · 기본 근무 스케줄) - 서버(스크립트 속성)에 저장해 모든 기기 공유 =====
+        const DAY_NAMES_KO = ['일', '월', '화', '수', '목', '금', '토'];
+        const DEFAULT_SCHEDULE = {
+            0: [{ name: '이준호', time: 'Full' }, { name: '호성연', time: '10:30~17:30' }],
+            1: [{ name: '호성연', time: 'Full' }],
+            2: [{ name: '호성연', time: 'Full' }],
+            3: [{ name: '이준호', time: 'Full' }],
+            4: [{ name: '이준호', time: 'Full' }],
+            5: [{ name: '이준호', time: 'Full' }],
+            6: [{ name: '이준호', time: 'Full' }, { name: '호성연', time: '10:30~17:30' }]
+        };
+        let appSettings = {};
+
+        function getMonthKey(y, m) { return `${y}-${String(m + 1).padStart(2, '0')}`; }
+
+        // 월별 목표 → 없으면 기본 목표 → 없으면 50,000,000원
+        function getTargetFor(y, m) {
+            const t = (appSettings && appSettings.targets) ? Number(appSettings.targets[getMonthKey(y, m)]) : NaN;
+            if (t > 0) return t;
+            const d = appSettings ? Number(appSettings.defaultTarget) : NaN;
+            return d > 0 ? d : TARGET_SALES;
+        }
+
+        function getScheduleTemplate() {
+            return (appSettings && appSettings.schedule) ? appSettings.schedule : DEFAULT_SCHEDULE;
+        }
+
+        async function loadSettings() {
+            try {
+                const res = await gasFetch(GOOGLE_WEB_APP_URL + '?action=getSettings');
+                const data = await res.json();
+                // 구버전 Code.gs는 getSettings를 모르고 전체 데이터를 돌려주므로 'settings' 키 유무로 구분
+                if (data && Object.prototype.hasOwnProperty.call(data, 'settings')) appSettings = data.settings || {};
+            } catch (e) { console.log('설정을 불러오지 못했습니다:', e); }
+        }
+
+        // POST 전송 (긴 데이터·비밀번호를 URL에 싣지 않음). 서버가 POST를 지원하지 않으면 'unsupported'
+        async function gasPost(payload) {
+            const res = await fetch(GOOGLE_WEB_APP_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify(Object.assign({}, payload, { key: getAppKey() }))
+            });
+            if (!res.ok) throw new Error('GAS 응답 오류: ' + res.status);
+            let data = null;
+            try { data = await res.json(); } catch (e) { data = null; }
+            if (!data) throw new Error('unsupported');
+            if (data.error === 'unauthorized') {
+                clearAppKey();
+                openAppKeyModal('PIN이 올바르지 않습니다. 다시 입력해주세요.');
+                throw new Error('unauthorized');
+            }
+            if (data.error === 'busy') throw new Error('서버가 다른 저장을 처리 중입니다.');
+            return data;
+        }
+
+        // "이준호(Full), 호성연(10:30~17:30)" 형식 검증·정리 (9:00 → 09:00)
+        function parseScheduleLine(str) {
+            const entries = []; const errors = [];
+            String(str || '').split(',').map(x => x.trim()).filter(Boolean).forEach(part => {
+                const m = part.match(/^(.+?)\s*\(\s*(full|\d{1,2}:\d{2}\s*~\s*\d{1,2}:\d{2})\s*\)$/i);
+                if (!m) { errors.push(part); return; }
+                let time = m[2].replace(/\s/g, '');
+                if (/^full$/i.test(time)) time = 'Full';
+                else time = time.split('~').map(x => x.padStart(5, '0')).join('~');
+                entries.push({ name: m[1].trim(), time });
+            });
+            return { entries, errors };
+        }
+
+        function readScheduleInputs() {
+            const schedule = {}; const errors = [];
+            for (let i = 0; i < 7; i++) {
+                const el = document.getElementById('schedInput' + i);
+                const r = parseScheduleLine(el ? el.value : '');
+                schedule[i] = r.entries;
+                r.errors.forEach(x => errors.push(`${DAY_NAMES_KO[i]}요일: "${x}"`));
+            }
+            return { schedule, errors };
+        }
+
+        function formatNumberInput(el) {
+            const v = el.value.replace(/[^0-9]/g, '');
+            el.value = v ? Number(v).toLocaleString('ko-KR') : '';
+        }
+
+        function openSettingsModal() {
+            const monthLabel = `${displayYear}년 ${displayMonth + 1}월`;
+            document.getElementById('settingsModalMonth').innerText = `${monthLabel} 기준`;
+            document.getElementById('btnApplySchedule').innerText = `${displayMonth + 1}월 근무 자동 배정`;
+            document.getElementById('settingsMonthTargetLabel').innerText = `${monthLabel} 목표`;
+            const monthT = (appSettings && appSettings.targets) ? appSettings.targets[getMonthKey(displayYear, displayMonth)] : null;
+            document.getElementById('settingsMonthTarget').value = monthT ? Number(monthT).toLocaleString('ko-KR') : '';
+            const defT = appSettings && Number(appSettings.defaultTarget) > 0 ? Number(appSettings.defaultTarget) : TARGET_SALES;
+            document.getElementById('settingsDefaultTarget').value = defT.toLocaleString('ko-KR');
+
+            const tpl = getScheduleTemplate();
+            document.getElementById('scheduleInputs').innerHTML = DAY_NAMES_KO.map((dn, idx) => {
+                const color = idx === 0 ? 'text-red-500' : (idx === 6 ? 'text-blue-600' : 'text-gray-700');
+                return `<div class="flex items-center gap-2"><span class="w-6 text-sm font-extrabold ${color} shrink-0 text-center">${dn}</span><input type="text" id="schedInput${idx}" class="flex-1 min-w-0 px-3 py-2 rounded-lg border border-gray-200 text-xs md:text-sm font-bold text-gray-800 outline-none focus:border-nana-dark" value="${escapeHtml(workerToString(tpl[idx] || []))}" placeholder="근무 없음"></div>`;
+            }).join('');
+            document.getElementById('settingsAdminPwd').value = '';
+            document.getElementById('scheduleOverwrite').checked = false;
+
+            const modal = document.getElementById('settingsModal'); const content = document.getElementById('settingsModalContent');
+            modal.classList.remove('hidden'); setTimeout(() => { modal.classList.remove('opacity-0'); content.classList.remove('scale-95'); }, 10);
+        }
+
+        function closeSettingsModal() {
+            const modal = document.getElementById('settingsModal'); const content = document.getElementById('settingsModalContent');
+            modal.classList.add('opacity-0'); content.classList.add('scale-95');
+            setTimeout(() => { modal.classList.add('hidden'); }, 300);
+        }
+
+        function isClosedDay(dateStr) {
+            if ((salesData[dateStr]?.event || '').includes('휴무')) return true;
+            return eventsList.some(ev => {
+                const endDate = ev.isSingle ? ev.startDate : ev.endDate;
+                return dateStr >= ev.startDate && dateStr <= endDate && String(ev.title).includes('휴무');
+            });
+        }
+
+        function applyScheduleToMonth() {
+            const { schedule, errors } = readScheduleInputs();
+            if (errors.length) { uiAlert(`스케줄 형식을 확인하세요.\n${errors.join('\n')}`); return; }
+            const overwrite = document.getElementById('scheduleOverwrite').checked;
+            const y = displayYear, m = displayMonth;
+            const dim = new Date(y, m + 1, 0).getDate();
+            const items = []; let skippedClosed = 0, skippedExisting = 0;
+            for (let d = 1; d <= dim; d++) {
+                const ds = getDateString(y, m, d);
+                if (isClosedDay(ds)) { skippedClosed++; continue; }
+                const existing = dailyWorkers[ds] || [];
+                if (existing.length > 0 && !overwrite) { skippedExisting++; continue; }
+                const tplDay = schedule[new Date(y, m, d).getDay()] || [];
+                if (tplDay.length === 0) continue;
+                if (workerToString(existing) === workerToString(tplDay)) continue;
+                items.push({ date: ds, list: tplDay });
+            }
+            if (items.length === 0) {
+                uiAlert(`새로 배정할 날짜가 없습니다.\n(이미 배정된 날 ${skippedExisting}일 · 휴무 ${skippedClosed}일 제외)`);
+                return;
+            }
+            const keepMsg = overwrite ? '이미 배정된 날도 덮어씀' : `이미 배정된 ${skippedExisting}일은 유지`;
+            uiConfirm(`${m + 1}월 ${items.length}일에 기본 스케줄로 근무자를 배정합니다.\n(${keepMsg} · 휴무 ${skippedClosed}일 제외)`, async () => {
+                const btn = document.getElementById('btnApplySchedule');
+                btn.disabled = true; btn.innerText = '배정 중...';
+
+                items.forEach(it => {
+                    it.list.forEach(w => {
+                        if (!workerList.some(x => x.name === w.name)) workerList.push({ name: w.name, color: WORKER_COLORS[workerList.length % WORKER_COLORS.length] });
+                    });
+                });
+                items.forEach(it => {
+                    dailyWorkers[it.date] = it.list.map((w, idx) => ({ id: 'w_' + Date.now() + '_' + it.date + '_' + idx, name: w.name, time: w.time, color: getWorkerColor(w.name) }));
+                });
+                saveWorkersToStorage();
+                renderCalendar();
+
+                const payloadItems = items.map(it => ({ date: it.date, worker: workerToString(dailyWorkers[it.date]) }));
+                let failed = [];
+                try {
+                    await gasPost({ action: 'writeWorkersBatch', items: payloadItems });
+                } catch (e) {
+                    if (e.message === 'unauthorized') {
+                        failed = payloadItems.map(x => x.date);
+                    } else {
+                        // 일괄 저장이 안 되는 경우(구버전 Code.gs 등) 하루씩 저장
+                        for (let i = 0; i < payloadItems.length; i++) {
+                            const it = payloadItems[i];
+                            btn.innerText = `배정 중... (${i + 1}/${payloadItems.length})`;
+                            try { await gasFetch(`${GOOGLE_WEB_APP_URL}?action=writeWorker&date=${it.date}&worker=${encodeURIComponent(it.worker)}`); }
+                            catch (e2) { failed.push(it.date); }
+                        }
+                    }
+                }
+                btn.disabled = false; btn.innerText = `${m + 1}월 근무 자동 배정`;
+                if (failed.length) uiAlert(`화면에는 배정됐지만 시트 저장에 실패한 날짜가 있습니다.\n다시 시도해주세요: ${failed.join(', ')}`);
+                else uiAlert(`${m + 1}월 ${items.length}일 근무 배정을 완료했습니다.`);
+            }, '배정', 'flex-1 px-4 py-3 bg-nana-dark text-white rounded-xl font-bold hover:bg-green-800 transition-colors');
+        }
+
+        async function saveSettingsFromModal() {
+            const { schedule, errors } = readScheduleInputs();
+            if (errors.length) { uiAlert(`스케줄 형식을 확인하세요.\n${errors.join('\n')}`); return; }
+            const pwd = document.getElementById('settingsAdminPwd').value;
+            if (!pwd) { uiAlert('설정 저장에는 리포트 비밀번호가 필요합니다.'); return; }
+            const parseNum = (v) => Number(String(v || '').replace(/[^0-9]/g, ''));
+            const monthT = parseNum(document.getElementById('settingsMonthTarget').value);
+            const defT = parseNum(document.getElementById('settingsDefaultTarget').value);
+            const targets = Object.assign({}, (appSettings && appSettings.targets) || {});
+            const key = getMonthKey(displayYear, displayMonth);
+            if (monthT > 0) targets[key] = monthT; else delete targets[key];
+            const newSettings = { targets, defaultTarget: defT > 0 ? defT : TARGET_SALES, schedule };
+
+            const btn = document.getElementById('btnSaveSettings');
+            btn.disabled = true; btn.innerText = '저장 중...';
+            try {
+                const data = await gasPost({ action: 'saveSettings', adminPwd: pwd, settings: newSettings });
+                if (data.ok) {
+                    appSettings = newSettings;
+                    closeSettingsModal();
+                    renderCalendar();
+                    uiAlert('설정을 저장했습니다.\n모든 기기에 바로 적용됩니다.');
+                } else if (data.error === 'admin') {
+                    uiAlert('리포트 비밀번호가 일치하지 않습니다.');
+                } else {
+                    uiAlert('설정 저장에 실패했습니다. (' + (data.error || '알 수 없는 오류') + ')');
+                }
+            } catch (e) {
+                if (e.message === 'unauthorized') { /* PIN 창이 이미 열림 */ }
+                else if (e.message === 'unsupported') uiAlert('서버(Code.gs)를 새 버전으로 배포해야 설정을 저장할 수 있습니다.');
+                else uiAlert('설정 저장에 실패했습니다.\n네트워크 또는 Code.gs 새 버전 배포 여부를 확인하세요.');
+            } finally {
+                btn.disabled = false; btn.innerText = '설정 저장';
+            }
+        }
+
+        // ===== [추가] 2026년 9~10월 POS 월별 매출현황 기준 일괄 반영 데이터 =====
+        // 9/25 추석 휴무는 매출 빈칸 유지 + 일정 '추석 휴무' 기록
+        const SEED_SALES = {
+            '2026-09-01': 571000, '2026-09-02': 446000, '2026-09-03': 1887000, '2026-09-04': 370000, '2026-09-05': 829000,
+            '2026-09-06': 315000, '2026-09-07': 941000, '2026-09-08': 642000, '2026-09-09': 1361000, '2026-09-10': 1068000, '2026-09-11': 693000, '2026-09-12': 2282000,
+            '2026-09-13': 529000, '2026-09-14': 533000, '2026-09-15': 512000, '2026-09-16': 2160900, '2026-09-17': 1891000, '2026-09-18': 379000, '2026-09-19': 902000,
+            '2026-09-20': 1567000, '2026-09-21': 905000, '2026-09-22': 340000, '2026-09-23': 564000, '2026-09-24': 1469000, '2026-09-26': 814000,
+            '2026-09-27': 399000, '2026-09-28': 793000, '2026-09-29': 1020000, '2026-09-30': 177000,
+            '2026-10-01': 2958000, '2026-10-02': 1306000, '2026-10-03': 1808000,
+            '2026-10-04': 2084000, '2026-10-05': 1024000, '2026-10-06': 1361000, '2026-10-07': 420000, '2026-10-08': 3267000, '2026-10-09': 1687000, '2026-10-10': 1279800,
+            '2026-10-11': 989000, '2026-10-12': 450000, '2026-10-13': 779000, '2026-10-14': 1188000, '2026-10-15': 312000, '2026-10-16': 531000, '2026-10-17': 1338000,
+            '2026-10-18': 605000, '2026-10-19': 604000, '2026-10-20': 1136000, '2026-10-21': 732000, '2026-10-22': 1462000, '2026-10-23': 1396000, '2026-10-24': 1444000,
+            '2026-10-25': 2279000, '2026-10-26': 613000, '2026-10-27': 527000, '2026-10-28': 1507900, '2026-10-29': 2193000
+        };
+        const SEED_EVENTS = { '2026-09-25': '추석 휴무' };
+        // 변경 스케줄 (원래 근무자와 교대)
+        const SEED_WORKER_OVERRIDES = {
+            '2026-09-16': [{ name: '팀장님', time: 'Full' }],
+            '2026-09-28': [{ name: '이준호', time: 'Full' }],
+            '2026-09-30': [{ name: '호성연', time: 'Full' }],
+            '2026-10-05': [{ name: '이준호', time: 'Full' }],
+            '2026-10-07': [{ name: '호성연', time: 'Full' }],
+            '2026-10-19': [{ name: '이준호', time: 'Full' }],
+            '2026-10-21': [{ name: '호성연', time: 'Full' }],
+            '2026-10-27': [{ name: '이준호', time: 'Full' }],
+            '2026-10-28': [{ name: '팀장님', time: 'Full' }]
+        };
+        const SEED_DONE_KEY = 'nanas_seed_2026_09_10_done';
+
+        // 기본 스케줄: 수~일 이준호 Full(10:30~20:30) / 월~화 호성연 Full / 토~일 호성연 파트(10:30~17:30)
+        function getSeedWorkers(dateStr) {
+            if (SEED_WORKER_OVERRIDES[dateStr]) return SEED_WORKER_OVERRIDES[dateStr];
+            const [y, m, d] = dateStr.split('-').map(Number);
+            const dow = new Date(y, m - 1, d).getDay();
+            if (dow === 1 || dow === 2) return [{ name: '호성연', time: 'Full' }];
+            if (dow >= 3 && dow <= 5) return [{ name: '이준호', time: 'Full' }];
+            return [{ name: '이준호', time: 'Full' }, { name: '호성연', time: '10:30~17:30' }];
+        }
+
+        function getSeedPending() {
+            const items = [];
+            Object.keys(SEED_SALES).forEach(dateStr => {
+                const cur = salesData[dateStr]?.sales;
+                const salesOk = cur !== undefined && cur !== null && cur !== '' && Number(cur) === SEED_SALES[dateStr];
+                const workersOk = workerToString(dailyWorkers[dateStr]) === workerToString(getSeedWorkers(dateStr));
+                if (!salesOk || !workersOk) items.push({ dateStr, needSales: !salesOk, needWorkers: !workersOk });
+            });
+            const eventItems = Object.keys(SEED_EVENTS).filter(d => (salesData[d]?.event || '') !== SEED_EVENTS[d]);
+            return { items, eventItems };
+        }
+
+        function isSeedDone() {
+            try { return localStorage.getItem(SEED_DONE_KEY) === '1'; } catch (e) { return false; }
+        }
+
+        function markSeedDone() {
+            try { localStorage.setItem(SEED_DONE_KEY, '1'); } catch (e) {}
+        }
+
+        function renderSeedBanner() {
+            const banner = document.getElementById('seedImportBanner');
+            if (!banner) return;
+            if (isFetching || isSeedDone()) { banner.classList.add('hidden'); return; }
+            const { items, eventItems } = getSeedPending();
+            if (items.length === 0 && eventItems.length === 0) { banner.classList.add('hidden'); return; }
+            const salesCnt = items.filter(x => x.needSales).length;
+            const workerCnt = items.filter(x => x.needWorkers).length;
+            document.getElementById('seedImportDesc').innerText = `POS 기준 매출 ${salesCnt}일, 근무 배정 ${workerCnt}일, 일정 ${eventItems.length}건이 아직 반영되지 않았습니다.`;
+            banner.classList.remove('hidden');
+        }
+
+        function dismissSeedImport() {
+            markSeedDone();
+            renderSeedBanner();
+        }
+
+        function applySeedImport() {
+            const { items, eventItems } = getSeedPending();
+            if (items.length === 0 && eventItems.length === 0) { markSeedDone(); renderSeedBanner(); return; }
+            const salesCnt = items.filter(x => x.needSales).length;
+            const workerCnt = items.filter(x => x.needWorkers).length;
+            uiConfirm(`2026년 9~10월 POS 데이터를 구글 시트에 반영합니다.\n매출 ${salesCnt}일 · 근무 ${workerCnt}일 · 일정 ${eventItems.length}건\n(해당 날짜의 기존 값은 POS 기준으로 덮어씁니다)`, async () => {
+                const btn = document.getElementById('btnSeedImport');
+                btn.disabled = true;
+
+                ['이준호', '호성연', '팀장님'].forEach(name => {
+                    if (!workerList.some(w => w.name === name)) workerList.push({ name, color: WORKER_COLORS[workerList.length % WORKER_COLORS.length] });
+                });
+
+                const total = items.length + eventItems.length;
+                let done = 0, failed = [];
+                for (const it of items) {
+                    btn.innerText = `반영 중... (${done + 1}/${total})`;
+                    try {
+                        if (it.needSales) {
+                            await gasFetch(`${GOOGLE_WEB_APP_URL}?action=write&date=${it.dateStr}&sales=${SEED_SALES[it.dateStr]}`);
+                            if (!salesData[it.dateStr]) salesData[it.dateStr] = {};
+                            salesData[it.dateStr].sales = SEED_SALES[it.dateStr];
+                        }
+                        if (it.needWorkers) {
+                            dailyWorkers[it.dateStr] = getSeedWorkers(it.dateStr).map((w, idx) => ({
+                                id: 'w_' + Date.now() + '_' + idx, name: w.name, time: w.time, color: getWorkerColor(w.name)
+                            }));
+                            await gasFetch(`${GOOGLE_WEB_APP_URL}?action=writeWorker&date=${it.dateStr}&worker=${encodeURIComponent(workerToString(dailyWorkers[it.dateStr]))}`);
+                        }
+                    } catch (e) { failed.push(it.dateStr); }
+                    done++;
+                }
+                for (const d of eventItems) {
+                    btn.innerText = `반영 중... (${done + 1}/${total})`;
+                    try {
+                        await gasFetch(`${GOOGLE_WEB_APP_URL}?action=writeEventRange&start=${d}&end=${d}&event=${encodeURIComponent(SEED_EVENTS[d])}&isYearly=false`);
+                        if (!salesData[d]) salesData[d] = {};
+                        salesData[d].event = SEED_EVENTS[d];
+                    } catch (e) { failed.push(d + '(일정)'); }
+                    done++;
+                }
+
+                saveWorkersToStorage();
+                parseEventsFromData();
+                btn.disabled = false; btn.innerText = '구글 시트에 일괄 반영';
+                if (failed.length === 0) {
+                    markSeedDone();
+                    uiAlert('9~10월 POS 데이터 반영이 완료되었습니다.');
+                } else {
+                    uiAlert(`일부 날짜 반영에 실패했습니다. 버튼을 다시 눌러 재시도하세요.\n실패: ${failed.join(', ')}`);
+                }
+                renderCalendar();
+            }, '반영', 'flex-1 px-4 py-3 bg-nana-dark text-white rounded-xl font-bold hover:bg-green-800 transition-colors');
+        }
+
+        async function fetchWeather(year, month) {
+            const cacheKey = `${year}-${month}`;
+            if (weatherCache[cacheKey] && weatherCache[cacheKey].timestamp > Date.now() - (1000 * 60 * 60 * 2)) return; // 2 hour cache
+
+            try {
+                const tz = 'Asia%2FSeoul';
+                const sDateObj = new Date(year, month, 1);
+                const eDateObj = new Date(year, month+1, 0);
+                const nowObj = new Date();
+                
+                // Forecast max is 14 days ahead. Clamp end date to prevent API 400 error.
+                const maxForecast = new Date(nowObj.getTime() + (14 * 24 * 60 * 60 * 1000));
+                let targetEndDate = eDateObj;
+                if (eDateObj > maxForecast) targetEndDate = maxForecast;
+                
+                if (sDateObj > maxForecast) return; // Ignore if entire month is far future
+
+                const sDate = `${year}-${String(month+1).padStart(2,'0')}-01`;
+                const eDate = `${targetEndDate.getFullYear()}-${String(targetEndDate.getMonth()+1).padStart(2,'0')}-${String(targetEndDate.getDate()).padStart(2,'0')}`;
+                
+                let baseUrl = 'https://archive-api.open-meteo.com/v1/archive';
+                const daysSinceStart = Math.floor((nowObj.getTime() - sDateObj.getTime()) / (1000 * 3600 * 24));
+                
+                // Use forecast API for the last ~80 days and future
+                if (daysSinceStart <= 80) {
+                    baseUrl = 'https://api.open-meteo.com/v1/forecast';
+                }
+                
+                const url = `${baseUrl}?latitude=37.3236&longitude=126.8309&start_date=${sDate}&end_date=${eDate}&hourly=temperature_2m,weathercode&timezone=${tz}`;
+                
+                const res = await fetch(url);
+                if (!res.ok) throw new Error("API error " + res.status);
+                const data = await res.json();
+                
+                if (data.hourly && data.hourly.time) {
+                    let monthlyData = {};
+                    for (let i=0; i<data.hourly.time.length; i++) {
+                        const t = data.hourly.time[i];
+                        const dStr = t.split('T')[0];
+                        const hour = parseInt(t.split('T')[1].split(':')[0]);
+                        
+                        if (!monthlyData[dStr]) monthlyData[dStr] = { am: null, pm: null };
+                        
+                        // 09:00 = AM, 15:00 = PM
+                        if (hour === 9) {
+                            monthlyData[dStr].am = { temp: Math.round(data.hourly.temperature_2m[i]), code: data.hourly.weathercode[i] };
+                        } else if (hour === 15) {
+                            monthlyData[dStr].pm = { temp: Math.round(data.hourly.temperature_2m[i]), code: data.hourly.weathercode[i] };
+                        }
+                    }
+                    weatherCache[cacheKey] = { timestamp: Date.now(), data: monthlyData };
+                    localStorage.setItem('nanas_weather', JSON.stringify(weatherCache));
+                }
+            } catch (e) {
+                console.log("날씨 데이터를 가져올 수 없습니다:", e);
+            }
+        }
+
+        function getWeatherEmoji(code) {
+            if (code == null) return '';
+            if (code >= 95) return '⛈️'; // [수정] 뇌우가 ❄️로 표시되던 문제
+            if (code <= 3) return '☀️'; 
+            if (code <= 48) return '☁️'; 
+            if (code <= 67 || (code >= 80 && code <= 82)) return '🌧️'; 
+            if (code <= 77 || code >= 85) return '❄️';
+            if (code >= 95) return '⛈️';
+            return '☀️';
+        }
+
+        function getHoliday(y, m, d) {
+            const dateStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+            const fixedHolidays = ['01-01', '03-01', '05-05', '06-06', '08-15', '10-03', '10-09', '12-25'];
+            if (fixedHolidays.includes(dateStr.substring(5))) return true;
+
+            // [추가] 2026년부터 노동절(5/1)·제헌절(7/17) 공휴일 지정
+            if (y >= 2026 && ['05-01', '07-17'].includes(dateStr.substring(5))) return true;
+
+            const variableHolidays = [
+                // 2025년 (설날 + 1/27 임시공휴일, 삼일절/어린이날/추석 대체공휴일, 6/3 대통령 선거)
+                '2025-01-27', '2025-01-28', '2025-01-29', '2025-01-30', '2025-03-03', '2025-05-06', '2025-06-03', '2025-10-05', '2025-10-06', '2025-10-07', '2025-10-08',
+                // 2026년 (설날, 삼일절/부처님오신날/광복절/개천절 대체공휴일, 지방선거, 추석)
+                '2026-02-16', '2026-02-17', '2026-02-18', '2026-03-02', '2026-05-24', '2026-05-25', '2026-06-03', '2026-08-17', '2026-09-24', '2026-09-25', '2026-09-26', '2026-10-05',
+                // 2027년 (설날/광복절/개천절/한글날/성탄절 대체공휴일, 부처님오신날, 추석) ※ 2027년은 선거일 없음
+                '2027-02-06', '2027-02-07', '2027-02-08', '2027-02-09', '2027-05-13', '2027-08-16', '2027-09-14', '2027-09-15', '2027-09-16', '2027-10-04', '2027-10-11', '2027-12-27',
+                // 2028년 (설날, 총선, 부처님오신날, 추석 대체공휴일)
+                '2028-01-26', '2028-01-27', '2028-01-28', '2028-04-12', '2028-05-02', '2028-10-02', '2028-10-03', '2028-10-04', '2028-10-05'
+            ];
+            if (variableHolidays.includes(dateStr)) return true;
+            return false;
+        }
+
+        function checkSalesInputLock() {
+            const dateStr = getDateString(displayYear, displayMonth, selectedDay);
+            const selectedDateObj = new Date(displayYear, displayMonth, selectedDay);
+            const lockThreshold = new Date(2026, 6, 16); 
+
+            const inputField = document.getElementById('inputDailySales');
+            const saveBtn = document.getElementById('btnSave');
+            if(!inputField || !saveBtn) return;
+            
+            const dayWorkers = dailyWorkers[dateStr] || [];
+            const hasWorkers = dayWorkers.length > 0;
+            
+            if (selectedDateObj >= lockThreshold && !hasWorkers) {
+                inputField.disabled = true; inputField.placeholder = "근무자를 먼저 배정해주세요";
+                inputField.classList.add('bg-gray-200', 'cursor-not-allowed'); inputField.classList.remove('bg-gray-50');
+                saveBtn.disabled = true; saveBtn.classList.replace('bg-nana-dark', 'bg-gray-400'); saveBtn.classList.add('cursor-not-allowed', 'opacity-70');
+            } else {
+                inputField.disabled = false; inputField.placeholder = "매출액을 입력하세요";
+                inputField.classList.remove('bg-gray-200', 'cursor-not-allowed'); inputField.classList.add('bg-gray-50');
+                saveBtn.disabled = false; saveBtn.classList.replace('bg-gray-400', 'bg-nana-dark'); saveBtn.classList.remove('cursor-not-allowed', 'opacity-70');
+            }
+        }
+
+        function openMonthPicker() {
+            pickerYear = displayYear;
+            renderMonthPicker();
+            const modal = document.getElementById('monthPickerModal');
+            const content = document.getElementById('monthPickerContent');
+            modal.classList.remove('hidden');
+            setTimeout(() => { modal.classList.remove('opacity-0'); content.classList.remove('scale-95'); }, 10);
+        }
+
+        function closeMonthPicker() {
+            const modal = document.getElementById('monthPickerModal');
+            const content = document.getElementById('monthPickerContent');
+            modal.classList.add('opacity-0'); content.classList.add('scale-95');
+            setTimeout(() => { modal.classList.add('hidden'); }, 300);
+        }
+
+        function changePickerYear(offset) { pickerYear += offset; renderMonthPicker(); }
+
+        function renderMonthPicker() {
+            document.getElementById('pickerYearDisplay').innerText = `${pickerYear}년`;
+            const grid = document.getElementById('pickerMonthsGrid');
+            grid.innerHTML = '';
+            for (let i = 0; i < 12; i++) {
+                const isCurrent = (pickerYear === currentDate.getFullYear() && i === currentDate.getMonth());
+                const isSelected = (pickerYear === displayYear && i === displayMonth);
+                let btnClass = "py-2 md:py-3 rounded-xl font-bold text-xs md:text-sm transition-all ";
+                if (isSelected) btnClass += "bg-nana-dark text-white shadow-md";
+                else if (isCurrent) btnClass += "bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100";
+                else btnClass += "bg-gray-50 text-gray-700 hover:bg-gray-100 border border-transparent";
+                grid.innerHTML += `<button onclick="selectMonthFromPicker(${i})" class="${btnClass}">${i + 1}월</button>`;
+            }
+        }
+
+        async function selectMonthFromPicker(month) {
+            if(isFetching) return;
+            displayYear = pickerYear; displayMonth = month;
+            selectedDay = (displayMonth === currentDate.getMonth() && displayYear === currentDate.getFullYear()) ? currentDate.getDate() : 1;
+            closeMonthPicker(); 
+            isFetching = true; renderCalendar();
+            await fetchWeather(displayYear, displayMonth);
+            isFetching = false; renderCalendar();
+        }
+
+        async function changeMonth(offset) {
+            if(isFetching) return;
+            displayMonth += offset;
+            if (displayMonth < 0) { displayMonth = 11; displayYear--; } 
+            else if (displayMonth > 11) { displayMonth = 0; displayYear++; }
+            if (displayMonth === currentDate.getMonth() && displayYear === currentDate.getFullYear()) {
+                selectedDay = currentDate.getDate();
+            } else { selectedDay = 1; }
+            
+            isFetching = true; renderCalendar();
+            await fetchWeather(displayYear, displayMonth);
+            isFetching = false; renderCalendar();
+        }
+
+        function selectDay(day) {
+            if(isFetching) return;
+            selectedDay = day; renderCalendar();
+        }
+
+        function showContextMenu(event, day) {
+            event.preventDefault(); contextMenuDay = day;
+            const menu = document.getElementById('customContextMenu');
+            menu.style.display = 'block';
+            let x = event.pageX; let y = event.pageY;
+            menu.classList.remove('hidden');
+            setTimeout(() => { menu.classList.remove('scale-95', 'opacity-0'); }, 10);
+            if (x + 160 > window.innerWidth) x = window.innerWidth - 170;
+            menu.style.left = x + 'px'; menu.style.top = y + 'px';
+        }
+
+        function hideContextMenu() {
+            const menu = document.getElementById('customContextMenu');
+            if (menu && !menu.classList.contains('hidden')) {
+                menu.classList.add('scale-95', 'opacity-0');
+                setTimeout(() => { menu.classList.add('hidden'); menu.style.display = 'none'; }, 150);
+            }
+        }
+
+        function actionEditData() {
+            if(contextMenuDay) { selectDay(contextMenuDay); setTimeout(() => { document.getElementById('inputDailySales')?.focus(); }, 100); }
+        }
+        function actionDeleteData() {
+            if(contextMenuDay) { selectDay(contextMenuDay); deleteDailySales(); }
+        }
+
+        function openEventModal() {
+            if(contextMenuDay) selectDay(contextMenuDay);
+            editingEventId = null;
+            document.getElementById('eventTitle').value = "";
+            document.getElementById('eventIsSingle').checked = true;
+            document.getElementById('eventIsYearly').checked = false;
+            toggleEventDateInputs();
+            document.getElementById('eventStartDate').value = getDateString(displayYear, displayMonth, selectedDay);
+            document.getElementById('eventEndDate').value = getDateString(displayYear, displayMonth, selectedDay);
+            
+            document.getElementById('eventFormTitle').innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> 새 일정 추가';
+            document.getElementById('btnSaveEvent').innerText = "일정 등록";
+            document.getElementById('btnCancelEditEvent').classList.add('hidden');
+
+            document.getElementById('eventModalDate').innerText = `${displayYear}년 ${displayMonth + 1}월 ${selectedDay}일`;
+            renderEventList();
+            
+            const modal = document.getElementById('eventModal'); const content = document.getElementById('eventModalContent');
+            modal.classList.remove('hidden'); setTimeout(() => { modal.classList.remove('opacity-0'); content.classList.remove('scale-95'); }, 10);
+        }
+
+        function closeEventModal() {
+            const modal = document.getElementById('eventModal'); const content = document.getElementById('eventModalContent');
+            modal.classList.add('opacity-0'); content.classList.add('scale-95');
+            setTimeout(() => { modal.classList.add('hidden'); }, 300);
+        }
+
+        function toggleEventDateInputs() {
+            const isSingle = document.getElementById('eventIsSingle').checked;
+            const group = document.getElementById('eventDateRangeGroup');
+            if (isSingle) {
+                group.classList.add('hidden', 'opacity-0');
+            } else {
+                group.classList.remove('hidden');
+                setTimeout(() => { group.classList.remove('opacity-0'); }, 10);
+            }
+        }
+
+        function renderEventList() {
+            const container = document.getElementById('eventListContainer');
+            const targetDateStr = getDateString(displayYear, displayMonth, selectedDay);
+            
+            let todaysEvents = eventsList.filter(ev => {
+                const endDate = ev.isSingle ? ev.startDate : ev.endDate;
+                return targetDateStr >= ev.startDate && targetDateStr <= endDate;
+            });
+
+            if (todaysEvents.length === 0) {
+                container.innerHTML = '<p class="text-sm text-gray-400 font-medium bg-gray-50 p-3 rounded-lg border border-gray-100">등록된 일정이 없습니다.</p>';
+                return;
+            }
+
+            let html = '';
+            todaysEvents.forEach(ev => {
+                const isEditing = editingEventId === ev.id;
+                const borderClass = isEditing ? 'border-blue-500 ring-1 ring-blue-500 bg-blue-50/30' : 'border-gray-200 bg-white hover:border-gray-300';
+                const typeStr = ev.isSingle ? '당일' : '기간';
+                html += `
+                <div class="flex justify-between items-center p-3 rounded-xl border transition-colors ${borderClass} shadow-sm">
+                    <div class="flex items-center gap-2.5">
+                        <span class="w-3 h-3 rounded-full shadow-sm shrink-0" style="background-color: ${ev.color}"></span>
+                        <div class="flex flex-col">
+                            <span class="text-sm font-extrabold text-gray-800">${escapeHtml(ev.title)}</span>
+                            <span class="text-[10px] font-bold text-gray-400">${typeStr}</span>
+                        </div>
+                    </div>
+                    <div class="flex gap-1.5">
+                        <button onclick="editEvent('${ev.id}')" class="text-xs font-bold px-2.5 py-1.5 bg-gray-50 text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors">편집</button>
+                        <button onclick="deleteEvent('${ev.id}')" class="text-xs font-bold px-2.5 py-1.5 bg-red-50 text-red-500 border border-red-100 rounded-lg hover:bg-red-100 transition-colors">삭제</button>
+                    </div>
+                </div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        function editEvent(id) {
+            const ev = eventsList.find(x => x.id === id); if(!ev) return;
+            editingEventId = id;
+            document.getElementById('eventTitle').value = ev.title;
+            document.getElementById('eventIsSingle').checked = ev.isSingle;
+            document.getElementById('eventIsYearly').checked = false;
+            toggleEventDateInputs();
+            document.getElementById('eventStartDate').value = ev.startDate;
+            document.getElementById('eventEndDate').value = ev.endDate || ev.startDate;
+            
+            document.getElementById('eventFormTitle').innerHTML = '<svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg> 일정 수정';
+            document.getElementById('btnSaveEvent').innerText = "수정 완료";
+            document.getElementById('btnCancelEditEvent').classList.remove('hidden');
+            renderEventList();
+        }
+
+        function cancelEditEvent() {
+            editingEventId = null;
+            document.getElementById('eventTitle').value = "";
+            document.getElementById('eventIsSingle').checked = true;
+            document.getElementById('eventIsYearly').checked = false;
+            toggleEventDateInputs();
+            document.getElementById('eventFormTitle').innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> 새 일정 추가';
+            document.getElementById('btnSaveEvent').innerText = "일정 등록";
+            document.getElementById('btnCancelEditEvent').classList.add('hidden');
+            renderEventList();
+        }
+
+        async function saveEvent() {
+            const title = document.getElementById('eventTitle').value.trim();
+            if(!title) { uiAlert("일정명을 입력하세요."); return; }
+            
+            const isSingle = document.getElementById('eventIsSingle').checked;
+            const isYearly = document.getElementById('eventIsYearly').checked;
+            
+            let startDate = document.getElementById('eventStartDate').value;
+            let endDate = document.getElementById('eventEndDate').value;
+            
+            if (isSingle) {
+                startDate = getDateString(displayYear, displayMonth, selectedDay);
+                endDate = startDate;
+            } else {
+                if(!startDate || !endDate) { uiAlert("시작과 종료 날짜를 지정하세요."); return; }
+                if(startDate > endDate) { uiAlert("종료 날짜가 시작 날짜보다 빠를 수 없습니다."); return; }
+            }
+
+            const btn = document.getElementById('btnSaveEvent');
+            const originalText = btn.innerText;
+            btn.innerText = "시트 동기화 중..."; btn.disabled = true;
+
+            try {
+                if (editingEventId) {
+                    const oldEv = eventsList.find(x => x.id === editingEventId);
+                    if (oldEv) {
+                        await gasFetch(`${GOOGLE_WEB_APP_URL}?action=writeEventRange&start=${oldEv.startDate}&end=${oldEv.endDate}&event=`);
+                        for(let d = new Date(oldEv.startDate); d <= new Date(oldEv.endDate); d.setDate(d.getDate()+1)) {
+                            let dStr = getDateString(d.getFullYear(), d.getMonth(), d.getDate());
+                            if(salesData[dStr]) salesData[dStr].event = "";
+                        }
+                    }
+                }
+
+                let eventText = encodeURIComponent(title);
+                await gasFetch(`${GOOGLE_WEB_APP_URL}?action=writeEventRange&start=${startDate}&end=${endDate}&event=${eventText}&isYearly=${isYearly}`);
+
+                if (isYearly) {
+                    let targetMDs = [];
+                    for(let d = new Date(startDate); d <= new Date(endDate); d.setDate(d.getDate()+1)) {
+                        let m = String(d.getMonth() + 1).padStart(2, '0');
+                        let day = String(d.getDate()).padStart(2, '0');
+                        targetMDs.push(m + '-' + day);
+                    }
+                    for (let dateKey in salesData) {
+                        if (dateKey.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                            let rowMD = dateKey.substring(5);
+                            if (targetMDs.includes(rowMD)) {
+                                salesData[dateKey].event = title;
+                            }
+                        }
+                    }
+                } else {
+                    for(let d = new Date(startDate); d <= new Date(endDate); d.setDate(d.getDate()+1)) {
+                        let dStr = getDateString(d.getFullYear(), d.getMonth(), d.getDate());
+                        if(!salesData[dStr]) salesData[dStr] = {};
+                        salesData[dStr].event = title;
+                    }
+                }
+
+                parseEventsFromData();
+                renderCalendar();
+                cancelEditEvent();
+            } catch (e) {
+                uiAlert("일정 저장에 실패했습니다. 네트워크를 확인하세요.");
+            } finally {
+                btn.innerText = originalText; btn.disabled = false;
+            }
+        }
+
+        function deleteEvent(id) {
+            const ev = eventsList.find(x => x.id === id);
+            if(!ev) return;
+            
+            uiConfirm(`'${ev.title}' 일정을 삭제하시겠습니까?\n(구글 시트에서도 삭제됩니다)`, async () => {
+                try {
+                    await gasFetch(`${GOOGLE_WEB_APP_URL}?action=writeEventRange&start=${ev.startDate}&end=${ev.endDate}&event=`);
+                    
+                    for(let d = new Date(ev.startDate); d <= new Date(ev.endDate); d.setDate(d.getDate()+1)) {
+                        let dStr = getDateString(d.getFullYear(), d.getMonth(), d.getDate());
+                        if(salesData[dStr]) salesData[dStr].event = "";
+                    }
+                    parseEventsFromData();
+                    renderCalendar();
+                    if (editingEventId === id) cancelEditEvent();
+                    else renderEventList();
+                } catch(e) {
+                    uiAlert("삭제에 실패했습니다.");
+                }
+            });
+        }
+
+        function openWorkerModal() {
+            editingWorkerId = null; resetWorkerForm(); renderWorkerDropdown(); renderAssignedWorkers(); renderManageWorkerList();
+            document.getElementById('workerModalDate').innerText = `${displayYear}년 ${displayMonth + 1}월 ${selectedDay}일`;
+            const modal = document.getElementById('workerModal'); const content = document.getElementById('workerModalContent');
+            modal.classList.remove('hidden'); setTimeout(() => { modal.classList.remove('opacity-0'); content.classList.remove('scale-95'); }, 10);
+        }
+
+        function closeWorkerModal() {
+            const modal = document.getElementById('workerModal'); const content = document.getElementById('workerModalContent');
+            modal.classList.add('opacity-0'); content.classList.add('scale-95');
+            setTimeout(() => { modal.classList.add('hidden'); }, 300);
+        }
+
+        function toggleTimeInputs() {
+            const isFull = document.getElementById('workerTimeFull').checked;
+            const group = document.getElementById('timeInputGroup');
+            if (isFull) group.classList.add('opacity-50', 'pointer-events-none');
+            else group.classList.remove('opacity-50', 'pointer-events-none');
+        }
+
+        function resetWorkerForm() {
+            document.getElementById('workerSelect').value = "";
+            document.getElementById('workerTimeFull').checked = true; toggleTimeInputs();
+            document.getElementById('workerStartTime').value = "10:30";
+            document.getElementById('workerEndTime').value = "20:30";
+            document.getElementById('workerFormTitle').innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> 새 근무자 배정';
+            document.getElementById('btnSaveWorkerForm').innerText = "배정 추가";
+            document.getElementById('btnCancelEditWorker').classList.add('hidden');
+        }
+
+        function renderWorkerDropdown() {
+            const select = document.getElementById('workerSelect'); const currentVal = select.value;
+            select.innerHTML = '<option value="">근무자를 선택하세요</option>';
+            workerList.forEach(w => { select.innerHTML += `<option value="${escapeHtml(w.name)}">${escapeHtml(w.name)}</option>`; });
+            select.value = currentVal; 
+        }
+
+        function renderManageWorkerList() {
+            const container = document.getElementById('workerListContainer'); container.innerHTML = '';
+            workerList.forEach((w, idx) => {
+                container.innerHTML += `<div class="flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-full border border-gray-200 shadow-sm"><span class="w-2.5 h-2.5 rounded-full" style="background-color: ${w.color}"></span><span class="text-sm font-bold text-gray-700">${escapeHtml(w.name)}</span><button onclick="deleteWorkerFromList(workerList[${idx}].name)" class="text-gray-400 hover:text-red-500 ml-1"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button></div>`;
+            });
+        }
+
+        function addWorkerToList() {
+            const name = document.getElementById('newWorkerName').value.trim();
+            if(!name) return;
+            if(workerList.some(w => w.name === name)) { uiAlert("이미 등록된 근무자입니다."); return; }
+            const color = WORKER_COLORS[workerList.length % WORKER_COLORS.length];
+            workerList.push({ name, color }); saveWorkersToStorage(); renderWorkerDropdown(); renderManageWorkerList();
+            document.getElementById('newWorkerName').value = "";
+        }
+
+        function deleteWorkerFromList(name) {
+            uiConfirm(`${name} 근무자를 전체 명단에서 삭제하시겠습니까?\n(기존에 배정된 일정표에서는 지워지지 않습니다.)`, () => {
+                workerList = workerList.filter(w => w.name !== name); saveWorkersToStorage(); renderWorkerDropdown(); renderManageWorkerList();
+            });
+        }
+
+        function renderAssignedWorkers() {
+            const dateStr = getDateString(displayYear, displayMonth, selectedDay);
+            const workers = dailyWorkers[dateStr] || [];
+            const container = document.getElementById('assignedWorkersContainer');
+            if(workers.length === 0) { container.innerHTML = '<p class="text-sm text-gray-400 font-medium bg-gray-50 p-3 rounded-lg border border-gray-100">배정된 근무자가 없습니다.</p>'; return; }
+            let html = '';
+            workers.forEach(w => {
+                const isEditing = editingWorkerId === w.id;
+                const borderClass = isEditing ? 'border-nana-dark ring-1 ring-nana-dark bg-green-50/30' : 'border-gray-200 bg-white hover:border-gray-300';
+                html += `<div class="flex justify-between items-center p-3 rounded-xl border transition-colors ${borderClass} shadow-sm"><div class="flex items-center gap-2.5"><span class="w-3 h-3 rounded-full shadow-sm shrink-0" style="background-color: ${w.color}"></span><div class="flex flex-col"><span class="text-sm font-extrabold text-gray-800">${escapeHtml(w.name)}</span><span class="text-xs font-semibold text-gray-500">${escapeHtml(w.time)}</span></div></div><div class="flex gap-1.5"><button onclick="editAssignedWorker('${w.id}')" class="text-xs font-bold px-2.5 py-1.5 bg-gray-50 text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors">편집</button><button onclick="removeAssignedWorker('${w.id}')" class="text-xs font-bold px-2.5 py-1.5 bg-red-50 text-red-500 border border-red-100 rounded-lg hover:bg-red-100 transition-colors">삭제</button></div></div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        function editAssignedWorker(id) {
+            const dateStr = getDateString(displayYear, displayMonth, selectedDay);
+            const w = (dailyWorkers[dateStr] || []).find(x => x.id === id); if(!w) return;
+            editingWorkerId = id; document.getElementById('workerSelect').value = w.name;
+            if(w.time === 'Full') { document.getElementById('workerTimeFull').checked = true; toggleTimeInputs(); } 
+            else {
+                document.getElementById('workerTimeFull').checked = false; toggleTimeInputs();
+                const parts = w.time.split('~'); if(parts.length === 2) { document.getElementById('workerStartTime').value = parts[0]; document.getElementById('workerEndTime').value = parts[1]; }
+            }
+            document.getElementById('workerFormTitle').innerHTML = '<svg class="w-4 h-4 text-nana-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg> 근무 배정 수정';
+            document.getElementById('btnSaveWorkerForm').innerText = "수정 완료"; document.getElementById('btnCancelEditWorker').classList.remove('hidden');
+            renderAssignedWorkers();
+        }
+
+        function cancelEditWorker() { editingWorkerId = null; resetWorkerForm(); renderAssignedWorkers(); }
+
+        async function saveWorkerAssignment() {
+            const name = document.getElementById('workerSelect').value; if(!name) { uiAlert("근무자를 선택하세요."); return; }
+            const isFull = document.getElementById('workerTimeFull').checked;
+            let timeStr = "Full";
+            if(!isFull) {
+                const st = document.getElementById('workerStartTime').value; const et = document.getElementById('workerEndTime').value;
+                if(!st || !et) { uiAlert("시간을 확인하세요."); return; }
+                timeStr = `${st}~${et}`;
+            }
+            const dateStr = getDateString(displayYear, displayMonth, selectedDay);
+            const workerColor = workerList.find(w => w.name === name)?.color || '#3b82f6';
+            if (!dailyWorkers[dateStr]) dailyWorkers[dateStr] = [];
+            
+            if (editingWorkerId) {
+                const idx = dailyWorkers[dateStr].findIndex(x => x.id === editingWorkerId);
+                if (idx > -1) { dailyWorkers[dateStr][idx].name = name; dailyWorkers[dateStr][idx].time = timeStr; dailyWorkers[dateStr][idx].color = workerColor; }
+            } else { dailyWorkers[dateStr].push({ id: 'w_' + Date.now(), name, time: timeStr, color: workerColor }); }
+            
+            saveWorkersToStorage(); cancelEditWorker(); renderWorkerBadge(); renderCalendar(); checkSalesInputLock();
+            syncWorkersToGAS(dateStr);
+        }
+
+        async function removeAssignedWorker(id) {
+            const dateStr = getDateString(displayYear, displayMonth, selectedDay); if (!dailyWorkers[dateStr]) return;
+            dailyWorkers[dateStr] = dailyWorkers[dateStr].filter(x => x.id !== id); saveWorkersToStorage();
+            if (editingWorkerId === id) cancelEditWorker(); else renderAssignedWorkers();
+            renderWorkerBadge(); renderCalendar(); checkSalesInputLock(); syncWorkersToGAS(dateStr);
+        }
+
+        async function syncWorkersToGAS(dateStr) {
+            const workers = dailyWorkers[dateStr] || [];
+            const workerString = workers.map(w => `${w.name}(${w.time})`).join(', ');
+            try { await gasFetch(`${GOOGLE_WEB_APP_URL}?action=writeWorker&date=${dateStr}&worker=${encodeURIComponent(workerString)}`); } catch(e) { console.error('근무자 시트 동기화 실패:', e); }
+        }
+
+        function renderWorkerBadge() {
+            const dateStr = getDateString(displayYear, displayMonth, selectedDay);
+            const workers = dailyWorkers[dateStr] || [];
+            const container = document.getElementById('workerDisplayBadgeContainer');
+            if (workers.length > 0) {
+                let html = '';
+                workers.forEach(w => { html += `<div class="flex items-center gap-1.5 px-2.5 py-1 bg-white border border-gray-200 rounded-lg shadow-sm cursor-pointer hover:bg-gray-50 transition-colors" onclick="openWorkerModal()"><span class="w-2.5 h-2.5 rounded-full shrink-0" style="background-color: ${w.color}"></span><span class="text-xs md:text-sm font-bold text-gray-800">${escapeHtml(w.name)} <span class="text-[10px] md:text-xs text-gray-500 ml-0.5">(${escapeHtml(w.time)})</span></span></div>`; });
+                container.innerHTML = html;
+            } else { container.innerHTML = '<span class="text-xs md:text-sm font-medium text-gray-400 py-1">배정된 근무자 없음</span>'; }
+        }
+
+        function openAnalyticsPassword() {
+            const pwdInput = document.getElementById('inputAnalyticsPwd');
+            if(pwdInput) pwdInput.value = '';
+            const modal = document.getElementById('passwordModal');
+            const content = document.getElementById('passwordModalContent');
+            modal.classList.remove('hidden');
+            setTimeout(() => { modal.classList.remove('opacity-0'); content.classList.remove('scale-95'); pwdInput?.focus(); }, 10);
+        }
+
+        function closePasswordModal() {
+            const modal = document.getElementById('passwordModal');
+            const content = document.getElementById('passwordModalContent');
+            modal.classList.add('opacity-0'); content.classList.add('scale-95');
+            setTimeout(() => { modal.classList.add('hidden'); }, 300);
+        }
+
+        // [수정] 비밀번호를 HTML에 두지 않고 서버(스크립트 속성)에서 검증, 성공 시 계산 상수를 받아옴
+        async function verifyAnalyticsPwd() {
+            const pwd = document.getElementById('inputAnalyticsPwd').value;
+            if (!pwd) return;
+            try {
+                const res = await gasFetch(`${GOOGLE_WEB_APP_URL}?action=verifyAdmin&pwd=${encodeURIComponent(pwd)}`);
+                const data = await res.json();
+                if (data && data.ok && data.config) {
+                    adminConfig = data.config;
+                    closePasswordModal();
+                    setTimeout(() => { openAnalyticsModal(); }, 300);
+                } else {
+                    uiAlert("비밀번호가 일치하지 않습니다.");
+                    document.getElementById('inputAnalyticsPwd').value = '';
+                }
+            } catch (e) {
+                if (e.message !== 'unauthorized') uiAlert("서버 확인에 실패했습니다. 네트워크를 확인하세요.");
+            }
+        }
+
+        // [추가] 서버에서 받은 설정값으로 리포트의 라벨/금액 표시
+        function renderAdminConfigLabels(C) {
+            const pct = (r) => (Math.round(Number(r) * 1000) / 10) + '%';
+            const setText = (id, txt) => { const el = document.getElementById(id); if (el) el.innerText = txt; };
+            const fixedList = C.fixedCosts || [];
+            const fixedTotal = fixedList.reduce((sum, f) => sum + Number(f.amount || 0), 0);
+            setText('anaCogsLabel', `원가 (약 ${pct(C.cogsRate)})`);
+            setText('anaVatLabel', (C.vatMode || 'net') === 'net' ? '예상 부가세 ((매출−원가)÷11)' : `예상 부가세 (${pct(C.vatRate)})`);
+            setText('anaFixed', formatKrw(fixedTotal) + '원');
+            const tip = document.getElementById('anaFixedTooltip');
+            if (tip) tip.innerHTML = fixedList.map((f, idx) => `<div class="flex justify-between${idx < fixedList.length - 1 ? ' mb-1.5' : ''}"><span class="text-gray-300">${escapeHtml(f.label)}</span><span class="font-bold">${formatKrw(Number(f.amount || 0) / 10000)}만</span></div>`).join('');
+            setText('anaJhBase', formatKrw(C.jhBase) + ' 원');
+            setText('anaJhMealLabel', `식대 (일 ${formatKrw(C.mealPerDay)}원)`);
+            setText('anaSyMealLabel', `식대 (일 ${formatKrw(C.mealPerDay)}원)`);
+            setText('anaJhDeduction', '- ' + formatKrw(C.jhDeduction) + ' 원');
+            setText('anaSyBaseLabel', `기본 근로 (시급 ${formatKrw(C.syWage)}원)`);
+            setText('anaSyTaxLabel', `세금 공제액 (${pct(C.syTaxRate)})`);
+        }
+
+        function openAnalyticsModal() {
+            renderAnalyticsDropdown(); runAnalytics();
+            const modal = document.getElementById('analyticsModal');
+            const content = document.getElementById('analyticsModalContent');
+            modal.classList.remove('hidden');
+            setTimeout(() => { modal.classList.remove('opacity-0'); content.classList.remove('scale-95'); }, 10);
+        }
+
+        // [수정] 전역 window.event 의존 제거 (브라우저 호환성). 닫기 버튼은 true, 배경 클릭은 이벤트 객체 전달
+        function closeAnalyticsModal(e) {
+            const force = (e === true);
+            const isBackdrop = !!(e && e.target && e.target.id === 'analyticsModal');
+            if(force || isBackdrop) {
+                adminConfig = null; // [추가] 닫으면 급여 설정값을 메모리에서 제거 (다시 열 때 비밀번호 재확인)
+                const modal = document.getElementById('analyticsModal');
+                const content = document.getElementById('analyticsModalContent');
+                modal.classList.add('opacity-0'); content.classList.add('scale-95');
+                setTimeout(() => { modal.classList.add('hidden'); }, 300);
+            }
+        }
+
+        function renderAnalyticsDropdown() {
+            const select = document.getElementById('analyticsMonthSelect');
+            select.innerHTML = '';
+            const dates = Object.keys(salesData).filter(k => k.match(/^\d{4}-\d{2}-\d{2}$/)).sort();
+            let startY = 2025, startM = 0; 
+            if(dates.length > 0) {
+                const firstD = dates[0].split('-');
+                startY = parseInt(firstD[0]); startM = parseInt(firstD[1])-1;
+            }
+            
+            let cy = startY, cm = startM;
+            const endY = currentDate.getFullYear(); const endM = currentDate.getMonth();
+            
+            while(cy < endY || (cy === endY && cm <= endM)) {
+                let selected = (cy === displayYear && cm === displayMonth) ? 'selected' : '';
+                select.innerHTML += `<option value="${cy}-${cm}" ${selected}>${cy}년 ${cm+1}월</option>`;
+                cm++; if(cm > 11) { cm = 0; cy++; }
+            }
+        }
+
+        // [추가] 근무시간 계산 (Full=9시간 / 4시간 초과 시 휴게 0.5h, 8시간 이상 시 추가 0.5h 차감) - 기존 규칙 그대로 함수화
+        function calcWorkHours(time) {
+            if (time === 'Full') return 9;
+            const p = String(time || '').split('~');
+            if (p.length !== 2) return 0;
+            const st = p[0].split(':'); const et = p[1].split(':');
+            let h = (parseInt(et[0]) + parseInt(et[1]) / 60) - (parseInt(st[0]) + parseInt(st[1]) / 60);
+            if (isNaN(h)) return 0;
+            if (h > 4) h -= 0.5; if (h >= 8) h -= 0.5;
+            return Math.max(0, h);
+        }
+
+        // [추가] 호성연 주휴수당: 주(월~일) 단위로 합산해 15시간 이상인 주만 지급, 주 40시간 상한.
+        // 달을 걸치는 주는 그 주가 끝나는 일요일이 속한 달에 반영 (아직 끝나지 않은 주는 제외)
+        function computeSyWeeklyHoliday(targetY, targetM, cutoffDay, C) {
+            const minH = C.syWeeklyMinHours ?? 15;
+            const res = { amount: 0, weeks: 0, eligible: 0 };
+            const cutoff = new Date(targetY, targetM, cutoffDay);
+            const dim = new Date(targetY, targetM + 1, 0).getDate();
+            for (let d = 1; d <= dim; d++) {
+                const sunday = new Date(targetY, targetM, d);
+                if (sunday.getDay() !== 0 || sunday > cutoff) continue;
+                res.weeks++;
+                let weekHours = 0;
+                for (let k = 6; k >= 0; k--) {
+                    const day = new Date(targetY, targetM, d - k);
+                    const ds = getDateString(day.getFullYear(), day.getMonth(), day.getDate());
+                    (dailyWorkers[ds] || []).forEach(w => { if (w.name.includes('성연')) weekHours += calcWorkHours(w.time); });
+                }
+                if (weekHours >= minH) { res.eligible++; res.amount += Math.min(weekHours, 40) / 40 * 8 * C.syWage; }
+            }
+            return res;
+        }
+
+        // ===== [추가] 4단계 분석 강화: 공통 도우미 =====
+        const HOLIDAY_EVENT_WORDS = ['설', '구정', '추석', '휴무'];
+        function hasHolidayWord(str) { return HOLIDAY_EVENT_WORDS.some(h => String(str || '').includes(h)); }
+        function eventEndDate(ev) { return ev.isSingle ? ev.startDate : ev.endDate; }
+
+        function isExcludedAnalyticsDay(ds) {
+            if (hasHolidayWord(salesData[ds]?.event)) return true;
+            return eventsList.some(ev => ds >= ev.startDate && ds <= eventEndDate(ev) && hasHolidayWord(ev.title));
+        }
+
+        // 분석 대상일: 오늘까지, 매출 > 0, 명절·휴무 일정 아님
+        function getValidSalesDays() {
+            const todayStr = getDateString(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate());
+            return Object.keys(salesData)
+                .filter(ds => /^\d{4}-\d{2}-\d{2}$/.test(ds) && ds <= todayStr && Number(salesData[ds].sales) > 0 && !isExcludedAnalyticsDay(ds))
+                .sort();
+        }
+
+        function dowOf(ds) { const [y, m, d] = ds.split('-').map(Number); return new Date(y, m - 1, d).getDay(); }
+        function addDaysStr(ds, n) { const [y, m, d] = ds.split('-').map(Number); const t = new Date(y, m - 1, d + n); return getDateString(t.getFullYear(), t.getMonth(), t.getDate()); }
+
+        function buildDowAverages(days) {
+            const sum = Array(7).fill(0), cnt = Array(7).fill(0);
+            days.forEach(ds => { const w = dowOf(ds); sum[w] += Number(salesData[ds].sales); cnt[w]++; });
+            return sum.map((v, i) => ({ avg: cnt[i] ? v / cnt[i] : 0, days: cnt[i] }));
+        }
+
+        const fmtMan = (v) => v > 0 ? formatKrw(v / 10000) + '만' : '-';
+        const idxBadge = (idx, small) => {
+            if (idx == null || !isFinite(idx)) return '<span class="text-gray-300">-</span>';
+            const v = Math.round(idx);
+            const cls = v >= 105 ? 'text-nana-dark bg-green-50 border-green-100' : (v <= 95 ? 'text-red-500 bg-red-50 border-red-100' : 'text-gray-600 bg-gray-50 border-gray-100');
+            return `<span class="inline-block px-2 py-0.5 rounded-md border font-black ${cls}">${v}</span>${small ? '<span class="block text-[10px] text-gray-400 font-medium mt-0.5">표본 적음</span>' : ''}`;
+        };
+
+        // 날씨 코드 분류 (맑음/흐림/비/눈) - 뇌우(95~99)는 비로 분류
+        function classifyWeather(code) {
+            if (code <= 3) return 'clear';
+            if (code <= 48) return 'cloud';
+            if (code <= 67 || (code >= 80 && code <= 82) || code >= 95) return 'rain';
+            if (code <= 77 || code >= 85) return 'snow';
+            return 'clear';
+        }
+
+        function weatherCardsHtml(weatherSales) {
+            const emojis = { clear: '☀️ 맑음', cloud: '☁️ 흐림', rain: '🌧️ 비', snow: '❄️ 눈' };
+            let html = '';
+            for (const [key, wd] of Object.entries(weatherSales)) {
+                const avg = wd.days > 0 ? Math.round(wd.sales / wd.days) : 0;
+                html += `
+                <div class="bg-white p-3 rounded-xl border border-gray-100 shadow-sm flex flex-col justify-between">
+                    <p class="text-xs md:text-sm font-bold text-gray-600 mb-2">${emojis[key]} <span class="text-[10px] text-gray-400 font-medium ml-1">(${wd.days}일)</span></p>
+                    <p class="text-base md:text-lg font-black ${avg > 0 ? 'text-blue-600' : 'text-gray-300'} whitespace-nowrap">${avg > 0 ? formatKrw(avg) + '원' : '-'}</p>
+                </div>`;
+            }
+            return html;
+        }
+
+        // 전체 기간 누적 날씨 분석 (캐시에 없는 달만 Open-Meteo에서 받아옴)
+        let cumWeatherToken = 0;
+        async function renderCumulativeWeather() {
+            const el = document.getElementById('anaWeatherCumStats');
+            if (!el) return;
+            const token = ++cumWeatherToken;
+            const days = getValidSalesDays();
+            if (days.length === 0) { el.innerHTML = '<p class="col-span-2 md:col-span-4 text-sm text-gray-400 font-medium">분석할 매출 데이터가 없습니다.</p>'; return; }
+            el.innerHTML = '<p class="col-span-2 md:col-span-4 text-sm text-gray-400 font-semibold animate-pulse">전체 기간 날씨 데이터를 불러오는 중...</p>';
+            const months = [...new Set(days.map(ds => ds.slice(0, 7)))];
+            for (const mk of months) {
+                const [y, m] = mk.split('-').map(Number);
+                const cacheKey = `${y}-${m - 1}`;
+                if (!(weatherCache[cacheKey] && weatherCache[cacheKey].data)) await fetchWeather(y, m - 1);
+                if (token !== cumWeatherToken) return; // 다른 달로 바꾼 경우 이전 작업 중단
+            }
+            const agg = { clear: { days: 0, sales: 0 }, cloud: { days: 0, sales: 0 }, rain: { days: 0, sales: 0 }, snow: { days: 0, sales: 0 } };
+            days.forEach(ds => {
+                const [y, m] = ds.split('-').map(Number);
+                const pm = weatherCache[`${y}-${m - 1}`]?.data?.[ds]?.pm;
+                if (!pm || pm.code == null) return;
+                const k = classifyWeather(pm.code);
+                agg[k].days++; agg[k].sales += Number(salesData[ds].sales);
+            });
+            el.innerHTML = weatherCardsHtml(agg);
+        }
+
+        // 요일별 평균 · 근무자 기여도 · 행사 효과
+        function renderPatternAnalytics(targetY, targetM) {
+            const allDays = getValidSalesDays();
+            const prefix = getMonthKey(targetY, targetM) + '-';
+            const monthDays = allDays.filter(ds => ds.startsWith(prefix));
+            const cum = buildDowAverages(allDays);
+            const mon = buildDowAverages(monthDays);
+            const emptyMsg = (t) => `<p class="p-4 text-sm text-gray-400 font-medium">${t}</p>`;
+
+            // 1) 요일별 평균 매출 (월~일 순)
+            const maxAvg = Math.max(1, ...cum.map(x => x.avg), ...mon.map(x => x.avg));
+            let dowHtml = '';
+            [1, 2, 3, 4, 5, 6, 0].forEach(w => {
+                const color = w === 0 ? 'text-red-500' : (w === 6 ? 'text-blue-600' : 'text-gray-700');
+                dowHtml += `
+                <div class="flex items-center gap-3">
+                    <span class="w-5 text-sm font-extrabold ${color} shrink-0 text-center">${DAY_NAMES_KO[w]}</span>
+                    <div class="flex-1 min-w-0">
+                        <div class="w-full bg-gray-100 rounded-full h-2 mb-1"><div class="bg-gray-300 h-2 rounded-full" style="width:${(cum[w].avg / maxAvg * 100).toFixed(1)}%"></div></div>
+                        <div class="w-full bg-gray-100 rounded-full h-2"><div class="bg-nana-dark h-2 rounded-full" style="width:${(mon[w].avg / maxAvg * 100).toFixed(1)}%"></div></div>
+                    </div>
+                    <div class="text-right shrink-0 w-32 text-[11px] md:text-xs leading-tight">
+                        <div class="font-bold text-gray-400">누적 ${fmtMan(cum[w].avg)} <span class="font-medium">(${cum[w].days}일)</span></div>
+                        <div class="font-black text-nana-dark">${targetM + 1}월 ${fmtMan(mon[w].avg)} <span class="font-medium">(${mon[w].days}일)</span></div>
+                    </div>
+                </div>`;
+            });
+            document.getElementById('anaDowStats').innerHTML = allDays.length ? dowHtml : emptyMsg('분석할 매출 데이터가 없습니다.');
+
+            // 2) 근무자별 매출 기여도 (선택한 달)
+            const ws = {};
+            monthDays.forEach(ds => {
+                const workers = dailyWorkers[ds] || [];
+                if (workers.length === 0) return;
+                const sale = Number(salesData[ds].sales);
+                const base = cum[dowOf(ds)].avg;
+                const ratio = base > 0 ? sale / base : null;
+                const names = [...new Set(workers.map(w => w.name))];
+                names.forEach(n => {
+                    if (!ws[n]) ws[n] = { days: 0, sales: 0, rSum: 0, rCnt: 0, solo: 0, soloSales: 0, sRSum: 0, sRCnt: 0 };
+                    const o = ws[n];
+                    o.days++; o.sales += sale;
+                    if (ratio !== null) { o.rSum += ratio; o.rCnt++; }
+                    if (names.length === 1) {
+                        o.solo++; o.soloSales += sale;
+                        if (ratio !== null) { o.sRSum += ratio; o.sRCnt++; }
+                    }
+                });
+            });
+            const wRows = Object.entries(ws).sort((a, b) => b[1].days - a[1].days);
+            if (wRows.length === 0) {
+                document.getElementById('anaWorkerStats').innerHTML = emptyMsg('이 달에는 근무자가 배정된 매출일이 없습니다.');
+            } else {
+                let t = `<table class="w-full min-w-[520px] text-xs md:text-sm">
+                    <thead><tr class="bg-gray-50 text-gray-500 font-bold border-b border-gray-100">
+                        <th class="text-left px-4 py-2.5">근무자</th><th class="text-right px-3 py-2.5">출근일 평균</th><th class="text-center px-3 py-2.5">전체 지수</th>
+                        <th class="text-right px-3 py-2.5">단독 근무일 평균</th><th class="text-center px-3 py-2.5">단독 지수</th></tr></thead><tbody>`;
+                wRows.forEach(([name, o]) => {
+                    const c = getWorkerColor(name);
+                    t += `<tr class="border-b border-gray-50 last:border-0">
+                        <td class="px-4 py-3 font-extrabold text-gray-800 whitespace-nowrap"><span class="inline-block w-2.5 h-2.5 rounded-full mr-1.5 align-middle" style="background-color:${c}"></span>${escapeHtml(name)}</td>
+                        <td class="px-3 py-3 text-right whitespace-nowrap"><span class="font-bold text-gray-800">${fmtMan(o.sales / o.days)}</span> <span class="text-gray-400 text-[11px]">(${o.days}일)</span></td>
+                        <td class="px-3 py-3 text-center">${idxBadge(o.rCnt ? o.rSum / o.rCnt * 100 : null, o.rCnt < 4)}</td>
+                        <td class="px-3 py-3 text-right whitespace-nowrap">${o.solo ? `<span class="font-bold text-gray-800">${fmtMan(o.soloSales / o.solo)}</span> <span class="text-gray-400 text-[11px]">(${o.solo}일)</span>` : '<span class="text-gray-300">-</span>'}</td>
+                        <td class="px-3 py-3 text-center">${o.sRCnt ? idxBadge(o.sRSum / o.sRCnt * 100, o.sRCnt < 4) : '<span class="text-gray-300">-</span>'}</td></tr>`;
+                });
+                t += '</tbody></table>';
+                document.getElementById('anaWorkerStats').innerHTML = t;
+            }
+
+            // 3) 세일·행사 효과 (명절/휴무 제외, 시작일이 오늘 이전인 최근 8건)
+            const todayStr = getDateString(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate());
+            const eventDaySet = new Set();
+            eventsList.forEach(ev => { for (let ds = ev.startDate; ds <= eventEndDate(ev); ds = addDaysStr(ds, 1)) eventDaySet.add(ds); });
+            const evs = eventsList.filter(ev => !hasHolidayWord(ev.title) && ev.startDate <= todayStr)
+                .sort((a, b) => b.startDate.localeCompare(a.startDate)).slice(0, 8);
+            if (evs.length === 0) {
+                document.getElementById('anaEventStats').innerHTML = emptyMsg('분석할 세일·행사 일정이 없습니다. 캘린더 우클릭 → 일정 관리에서 행사를 등록해 보세요.');
+            } else {
+                let t = `<table class="w-full min-w-[520px] text-xs md:text-sm">
+                    <thead><tr class="bg-gray-50 text-gray-500 font-bold border-b border-gray-100">
+                        <th class="text-left px-4 py-2.5">일정</th><th class="text-left px-3 py-2.5">기간</th><th class="text-right px-3 py-2.5">행사 일평균</th>
+                        <th class="text-right px-3 py-2.5">평소(같은 요일)</th><th class="text-center px-3 py-2.5">평소 대비</th></tr></thead><tbody>`;
+                evs.forEach(ev => {
+                    const end = eventEndDate(ev);
+                    const evDays = allDays.filter(ds => ds >= ev.startDate && ds <= end);
+                    const winS = addDaysStr(ev.startDate, -28), winE = addDaysStr(end, 28);
+                    const baseDays = allDays.filter(ds => ds >= winS && ds <= winE && !eventDaySet.has(ds));
+                    const baseDow = buildDowAverages(baseDays);
+                    let rSum = 0, rCnt = 0, sSum = 0, bSum = 0;
+                    evDays.forEach(ds => {
+                        const w = dowOf(ds);
+                        const base = baseDow[w].avg || cum[w].avg;
+                        const sale = Number(salesData[ds].sales);
+                        sSum += sale;
+                        if (base > 0) { rSum += sale / base; rCnt++; bSum += base; }
+                    });
+                    const fmtD = (ds) => `${Number(ds.slice(5, 7))}/${Number(ds.slice(8, 10))}`;
+                    const period = ev.startDate === end ? fmtD(ev.startDate) : `${fmtD(ev.startDate)}~${fmtD(end)}`;
+                    let diffHtml = '<span class="text-gray-300">-</span>';
+                    if (rCnt) {
+                        const diff = (rSum / rCnt - 1) * 100;
+                        const cls = diff >= 5 ? 'text-nana-dark bg-green-50 border-green-100' : (diff <= -5 ? 'text-red-500 bg-red-50 border-red-100' : 'text-gray-600 bg-gray-50 border-gray-100');
+                        diffHtml = `<span class="inline-block px-2 py-0.5 rounded-md border font-black ${cls}">${diff >= 0 ? '+' : ''}${diff.toFixed(0)}%</span>`;
+                    }
+                    t += `<tr class="border-b border-gray-50 last:border-0">
+                        <td class="px-4 py-3 font-extrabold text-gray-800"><span class="inline-block w-2.5 h-2.5 rounded-full mr-1.5 align-middle" style="background-color:${ev.color}"></span>${escapeHtml(ev.title)}</td>
+                        <td class="px-3 py-3 text-gray-500 font-bold whitespace-nowrap">${ev.startDate.slice(0, 4)} ${period} <span class="text-gray-400 font-medium">(${evDays.length}일)</span></td>
+                        <td class="px-3 py-3 text-right font-bold text-gray-800 whitespace-nowrap">${evDays.length ? fmtMan(sSum / evDays.length) : '-'}</td>
+                        <td class="px-3 py-3 text-right font-bold text-gray-400 whitespace-nowrap">${rCnt ? fmtMan(bSum / rCnt) : '-'}</td>
+                        <td class="px-3 py-3 text-center">${diffHtml}</td></tr>`;
+                });
+                t += '</tbody></table>';
+                document.getElementById('anaEventStats').innerHTML = t;
+            }
+        }
+
+        function runAnalytics() {
+            const C = adminConfig;
+            if (!C) return;
+            renderAdminConfigLabels(C);
+            const sel = document.getElementById('analyticsMonthSelect').value.split('-');
+            const targetY = parseInt(sel[0]); const targetM = parseInt(sel[1]);
+            
+            const daysInMonth = new Date(targetY, targetM + 1, 0).getDate();
+            const isCurrentMonth = (targetY === currentDate.getFullYear() && targetM === currentDate.getMonth());
+            const maxDayToCompare = isCurrentMonth ? currentDate.getDate() : daysInMonth;
+            // [추가] 진행 중인 달은 오늘까지 경과일 비율로 월 고정 항목(고정비·점장 기본급·사측 보험료)을 일할 계산
+            const periodRatio = isCurrentMonth ? (maxDayToCompare / daysInMonth) : 1;
+
+            let targetSales = 0, targetSalesUpToToday = 0;
+            let syHours = 0, syDays = 0, syGross = 0;
+            let jhDays = 0, jhGross = 0;
+            
+            let weatherSales = { 
+                clear: { days: 0, sales: 0 }, cloud: { days: 0, sales: 0 },
+                rain: { days: 0, sales: 0 }, snow: { days: 0, sales: 0 } 
+            };
+            const cacheKey = `${targetY}-${targetM}`;
+            const wData = (weatherCache[cacheKey] && weatherCache[cacheKey].data) ? weatherCache[cacheKey].data : {};
+
+            for(let i=1; i<=daysInMonth; i++) {
+                let dateStr = getDateString(targetY, targetM, i);
+                let currentSalesData = salesData[dateStr] || {};
+                let sale = currentSalesData.sales !== undefined ? currentSalesData.sales : 0;
+                let gsEvent = currentSalesData.event || '';
+                
+                targetSales += sale;
+                if(i <= maxDayToCompare) targetSalesUpToToday += sale;
+
+                // 인건비 (진행 중인 달은 오늘까지 근무분만 반영 - 미리 배정해 둔 미래 근무는 제외)
+                let dayWorkers = i <= maxDayToCompare ? (dailyWorkers[dateStr] || []) : [];
+                dayWorkers.forEach(w => {
+                    let hours = calcWorkHours(w.time);
+                    if(w.name.includes("성연")) { syDays++; syHours += hours; syGross += (hours * C.syWage) + C.mealPerDay; }
+                    if(w.name.includes("준호")) { jhDays++; }
+                });
+
+                // 날씨별 매출 분석 (매출 0원, 휴무일 제외)
+                const isHolidayString = (str) => ['설', '구정', '추석', '휴무'].some(h => str.includes(h));
+                let hasHolidayEvent = false;
+                
+                // Check custom events for holidays
+                eventsList.forEach(ev => {
+                    let evStart = ev.startDate; let evEnd = ev.isSingle ? ev.startDate : ev.endDate;
+                    let targetD = dateStr;
+                    if (ev.isYearly) { evStart = evStart.substring(5); evEnd = evEnd.substring(5); targetD = targetD.substring(5); }
+                    if (targetD >= evStart && targetD <= evEnd && isHolidayString(ev.title)) hasHolidayEvent = true;
+                });
+                if (isHolidayString(gsEvent)) hasHolidayEvent = true;
+
+                if (sale > 0 && !hasHolidayEvent && wData[dateStr]) {
+                    const pmCode = wData[dateStr].pm ? wData[dateStr].pm.code : null;
+                    if (pmCode !== null) {
+                        let key = classifyWeather(pmCode); // [수정] 뇌우(95~99)를 '비'로 분류
+                        
+                        weatherSales[key].days++;
+                        weatherSales[key].sales += sale;
+                    }
+                }
+            }
+
+            // 날씨 통계 렌더링
+            const emojis = { clear: '☀️ 맑음', cloud: '☁️ 흐림', rain: '🌧️ 비', snow: '❄️ 눈' };
+            let wsHtml = '';
+            for (const [key, wd] of Object.entries(weatherSales)) {
+                let avg = wd.days > 0 ? Math.round(wd.sales / wd.days) : 0;
+                wsHtml += `
+                <div class="bg-white p-3 rounded-xl border border-gray-100 shadow-sm flex flex-col justify-between">
+                    <p class="text-xs md:text-sm font-bold text-gray-600 mb-2">${emojis[key]} <span class="text-[10px] text-gray-400 font-medium ml-1">(${wd.days}일)</span></p>
+                    <p class="text-base md:text-lg font-black ${avg > 0 ? 'text-blue-600' : 'text-gray-300'} whitespace-nowrap">${avg > 0 ? formatKrw(avg) + '원' : '-'}</p>
+                </div>`;
+            }
+            document.getElementById('anaWeatherStats').innerHTML = wsHtml;
+
+            // 성연 급여
+            // [수정] 주휴수당: 주 단위 15시간 판정 (기존: 전체 시간 × 0.2 일괄 적용)
+            const syWeekly = computeSyWeeklyHoliday(targetY, targetM, maxDayToCompare, C);
+            let syJooHyu = syWeekly.amount; syGross += syJooHyu;
+            let syTax = syGross * C.syTaxRate; let syNet = syGross - syTax;
+
+            // 준호 급여
+            let jhRate = C.incentiveBase;
+            if (targetY > C.incentiveStartYear || (targetY === C.incentiveStartYear && targetM >= C.incentiveStartMonthIdx)) {
+                let yearsElapsed = targetY - C.incentiveStartYear;
+                if (targetM < C.incentiveStartMonthIdx) yearsElapsed--; 
+                jhRate = C.incentiveBase + (yearsElapsed * C.incentiveStep);
+                if (jhRate > C.incentiveMax) jhRate = C.incentiveMax;
+            }
+
+            let jhIncentive = targetSales * jhRate;
+            let jhMeal = jhDays * C.mealPerDay;
+            // 사측 4대보험 부담금 (마진 계산용)
+            let jhInsurance = C.jhInsurance; 
+            // 근로자 공제금액 (급여 명세서 기준 고정액)
+            let jhDeduction = C.jhDeduction;
+            
+            let jhTotalPayment = C.jhBase + jhIncentive + jhMeal; // 기본급 + 인센티브 + 식대
+            let jhNet = jhTotalPayment - jhDeduction; // 실수령액
+            jhGross = (C.jhBase * periodRatio) + jhIncentive + jhMeal + (jhInsurance * periodRatio); // [수정] 진행 중인 달은 기본급·사측 보험료 일할 // 점장 마진계산용 사측 부담분 포함 총 인건비
+
+            let totalLabor = syGross + jhGross;
+            let cogs = targetSales * C.cogsRate;
+            // [수정] 부가세: 납부세액 = 매출세액 − 매입세액 = (매출 − 원가) ÷ 11 (둘 다 부가세 포함 금액 기준)
+            // ADMIN_CONFIG.vatMode를 'simple'로 두면 기존 방식(매출 × 세율)
+            const vatMode = C.vatMode || 'net';
+            let vat = vatMode === 'net' ? Math.max(0, (targetSales - cogs) / 11) : targetSales * C.vatRate;
+            let fixedCost = (C.fixedCosts || []).reduce((sum, f) => sum + Number(f.amount || 0), 0) * periodRatio; // [수정] 진행 중인 달은 일할 
+            let netProfit = targetSales - cogs - vat - fixedCost - totalLabor;
+
+            document.getElementById('anaTotalSales').innerText = formatKrw(targetSales) + "원";
+            // [추가] 계산 기준 기간 표시
+            document.getElementById('anaPeriodNote').innerText = isCurrentMonth ? `(${targetM+1}/${maxDayToCompare} 오늘까지 경과 기준)` : '(월 전체 기준)';
+            document.getElementById('anaSalesLabel').innerText = isCurrentMonth ? '이번 달 누적 매출' : '월 총 발생 매출';
+            document.getElementById('anaFixedLabel').innerText = isCurrentMonth ? `고정비 (${maxDayToCompare}/${daysInMonth}일분)` : '고정비 (월세 등)';
+            document.getElementById('anaFixed').innerText = formatKrw(fixedCost) + "원";
+            document.getElementById('anaSyHolidayLabel').innerText = `예상 주휴수당 (15시간 이상 ${syWeekly.eligible}/${syWeekly.weeks}주)`;
+            document.getElementById('anaCogs').innerText = formatKrw(cogs) + "원";
+            document.getElementById('anaVat').innerText = formatKrw(vat) + "원";
+            document.getElementById('anaLabor').innerText = formatKrw(totalLabor) + "원";
+            const netEl = document.getElementById('anaNetProfit');
+            netEl.innerText = formatKrw(netProfit) + "원";
+            netEl.className = netProfit >= 0 ? "text-2xl md:text-3xl font-black text-green-400 tracking-tight" : "text-2xl md:text-3xl font-black text-red-400 tracking-tight";
+
+            document.getElementById('anaJhDays').innerText = jhDays + "일 출근";
+            document.getElementById('anaJhIncentiveLabel').innerText = `매출 인센티브 (${(jhRate*100).toFixed(0)}%)`;
+            document.getElementById('anaJhIncentive').innerText = formatKrw(Math.round(jhIncentive)) + " 원";
+            document.getElementById('anaJhMeal').innerText = formatKrw(jhMeal) + " 원";
+            
+            document.getElementById('anaJhGross').innerText = formatKrw(Math.round(jhTotalPayment)) + " 원";
+            document.getElementById('anaJhNet').innerText = formatKrw(Math.round(jhNet)) + " 원";
+
+            document.getElementById('anaSyInfo').innerText = `${syDays}일 / ${syHours.toFixed(1)}시간`;
+            document.getElementById('anaSyBase').innerText = formatKrw(syHours * C.syWage) + " 원";
+            document.getElementById('anaSyHoliday').innerText = formatKrw(syJooHyu) + " 원";
+            document.getElementById('anaSyMeal').innerText = formatKrw(syDays * C.mealPerDay) + " 원";
+            document.getElementById('anaSyTotal').innerText = formatKrw(syGross) + " 원";
+            document.getElementById('anaSyTax').innerText = "- " + formatKrw(syTax) + " 원";
+            document.getElementById('anaSyNet').innerText = formatKrw(syNet) + " 원";
+
+            let lastYearSalesUpToToday = 0;
+            let daysInLastYearMonth = new Date(targetY - 1, targetM + 1, 0).getDate();
+            for(let i=1; i<=Math.min(maxDayToCompare, daysInLastYearMonth); i++) {
+                let sale = salesData[getDateString(targetY - 1, targetM, i)]?.sales || 0;
+                lastYearSalesUpToToday += sale;
+            }
+
+            document.getElementById('anaThisYearLabel').innerText = `올해 ${targetM+1}월 (1~${maxDayToCompare}일)`;
+            document.getElementById('anaThisYearVal').innerText = formatKrw(targetSalesUpToToday) + " 원";
+            document.getElementById('anaLastYearLabel').innerText = `작년 ${targetM+1}월 (1~${maxDayToCompare}일)`;
+            document.getElementById('anaLastYearVal').innerText = formatKrw(lastYearSalesUpToToday) + " 원";
+
+            let maxScale = Math.max(targetSalesUpToToday, lastYearSalesUpToToday, 1);
+            document.getElementById('anaThisYearBar').style.width = (targetSalesUpToToday/maxScale*100) + "%";
+            document.getElementById('anaLastYearBar').style.width = (lastYearSalesUpToToday/maxScale*100) + "%";
+
+            const yoyRes = document.getElementById('anaYoyResult');
+            if(lastYearSalesUpToToday > 0) {
+                let yRate = ((targetSalesUpToToday - lastYearSalesUpToToday) / lastYearSalesUpToToday) * 100;
+                if(yRate > 0) yoyRes.innerHTML = `<span class="text-xs md:text-sm font-bold text-nana-dark bg-green-50 px-3 py-1.5 rounded-lg border border-green-100 shadow-sm">전년 동기 대비 ▲ ${yRate.toFixed(1)}% 성장</span>`;
+                else yoyRes.innerHTML = `<span class="text-xs md:text-sm font-bold text-red-500 bg-red-50 px-3 py-1.5 rounded-lg border border-red-100 shadow-sm">전년 동기 대비 ▼ ${Math.abs(yRate).toFixed(1)}% 하락</span>`;
+            } else { yoyRes.innerHTML = `<span class="text-xs md:text-sm font-bold text-gray-500 bg-gray-100 px-3 py-1.5 rounded-lg">작년 비교 데이터 없음</span>`; }
+
+            let predMonth = 0;
+            if(maxDayToCompare > 0) predMonth = (targetSalesUpToToday / maxDayToCompare) * daysInMonth;
+            
+            let totalYearSales = 0; let monthsPassed = isCurrentMonth ? targetM + (maxDayToCompare/daysInMonth) : targetM + 1;
+            for(let m=0; m<=targetM; m++) {
+                let dm = new Date(targetY, m+1, 0).getDate();
+                for(let d=1; d<=dm; d++) totalYearSales += (salesData[getDateString(targetY, m, d)]?.sales || 0);
+            }
+            let predYear = monthsPassed > 0 ? (totalYearSales / monthsPassed) * 12 : 0;
+
+            document.getElementById('anaPredMonth').innerText = formatKrw(Math.round(predMonth)) + " 원";
+            document.getElementById('anaPredYear').innerText = formatKrw(Math.round(predYear)) + " 원";
+
+            // [추가] 4단계 분석 강화
+            renderPatternAnalytics(targetY, targetM);
+            renderCumulativeWeather();
+        }
+
+        function renderCalendar() {
+            currentDate = new Date(); // [수정] 페이지를 켜둔 채 날짜가 바뀌어도 '오늘' 기준이 갱신되도록
+            const monthDisplay = document.getElementById('monthDisplay');
+            monthDisplay.innerText = `${displayYear}. ${String(displayMonth + 1).padStart(2, '0')}`;
+            document.getElementById('yearlyChartTitle').innerText = `${displayYear}년 월별 매출 추이`;
+
+            const grid = document.getElementById('calendarGrid'); grid.innerHTML = '';
+            if (isFetching) { grid.innerHTML = `<div class="col-span-7 py-20 text-center text-gray-400 font-semibold animate-pulse tracking-wide flex items-center justify-center h-full">데이터 동기화 중...</div>`; return; }
+
+            const firstDay = new Date(displayYear, displayMonth, 1).getDay(); 
+            const daysInMonth = new Date(displayYear, displayMonth + 1, 0).getDate();
+            const dailyAverageTarget = getTargetFor(displayYear, displayMonth) / daysInMonth; 
+
+            for (let i = 0; i < firstDay; i++) { grid.innerHTML += `<div class="p-1 md:p-2 bg-gray-50/50 rounded-xl border border-transparent min-h-[90px] md:min-h-[120px]"></div>`; }
+
+            const wCacheKey = `${displayYear}-${displayMonth}`;
+            const wData = (weatherCache[wCacheKey] && weatherCache[wCacheKey].data) ? weatherCache[wCacheKey].data : {};
+
+            for (let i = 1; i <= daysInMonth; i++) {
+                const dateStr = getDateString(displayYear, displayMonth, i);
+                const currentData = salesData[dateStr] || {};
+                
+                const dailySale = currentData.sales !== undefined && currentData.sales !== "" ? currentData.sales : null;
+                const gsEvent = currentData.event || ''; 
+                
+                const isSelected = i === selectedDay;
+                const isToday = (i === currentDate.getDate() && displayMonth === currentDate.getMonth() && displayYear === currentDate.getFullYear());
+                
+                let bgClass = 'bg-white hover:border-gray-300 border-gray-100 shadow-sm';
+                if (isSelected) bgClass = 'bg-green-50/50 border-nana-dark ring-2 ring-nana-dark shadow-md transform scale-[1.02] z-10';
+                else if (isToday) bgClass = 'bg-blue-50/50 border-blue-200 hover:border-blue-300';
+
+                const dayOfWeek = new Date(displayYear, displayMonth, i).getDay();
+                let textClass = 'text-gray-700';
+                if (dayOfWeek === 0 || getHoliday(displayYear, displayMonth, i)) textClass = 'text-red-500'; 
+                else if (dayOfWeek === 6) textClass = 'text-blue-600';
+
+                // Event Logic for Calendar Display
+                let eventDisplayHTML = '';
+
+                let matchedEvents = eventsList.filter(ev => {
+                    const endDate = ev.isSingle ? ev.startDate : ev.endDate;
+                    return dateStr >= ev.startDate && dateStr <= endDate;
+                }).slice(0, 5); // Max 5 events per day
+
+                matchedEvents.forEach(ev => {
+                    if (ev.isSingle) {
+                        eventDisplayHTML += `<div class="flex items-center gap-1 w-full overflow-hidden mb-0.5"><span class="w-1.5 h-1.5 rounded-full shrink-0 shadow-sm" style="background-color:${ev.color}"></span><span class="text-[9px] md:text-[10px] font-bold truncate text-gray-600">${escapeHtml(ev.title)}</span></div>`;
+                    } else {
+                        eventDisplayHTML += `<div class="w-full overflow-hidden mb-0.5 rounded px-1 py-0.5" style="background-color:${ev.color}20; border-left: 2px solid ${ev.color};"><span class="text-[9px] md:text-[10px] font-bold truncate block" style="color:${ev.color}">${escapeHtml(ev.title)}</span></div>`;
+                    }
+                });
+
+                if (eventDisplayHTML) eventDisplayHTML = `<div class="flex flex-col mt-1 w-full px-0.5">${eventDisplayHTML}</div>`;
+
+                // Weather Logic for Calendar Display
+                let weatherHTML = '';
+                if (wData[dateStr]) {
+                    const am = wData[dateStr].am;
+                    const pm = wData[dateStr].pm;
+                    if (am || pm) {
+                        weatherHTML = `<div class="flex flex-col items-end opacity-60">`;
+                        if(am) weatherHTML += `<span class="text-[8px] md:text-[9px] font-medium tracking-tighter leading-tight">${getWeatherEmoji(am.code)} ${am.temp}°</span>`;
+                        if(pm) weatherHTML += `<span class="text-[8px] md:text-[9px] font-medium tracking-tighter leading-tight">${getWeatherEmoji(pm.code)} ${pm.temp}°</span>`;
+                        weatherHTML += `</div>`;
+                    }
+                }
+
+                // Worker Tags
+                let workerTagsHTML = '';
+                const dayWorkers = dailyWorkers[dateStr] || [];
+                if (dayWorkers.length > 0) {
+                    workerTagsHTML = `<div class="flex flex-col gap-0.5 items-end mt-0.5 md:mt-1 mr-0.5 md:mr-1">`;
+                    dayWorkers.forEach(w => { workerTagsHTML += `<div class="flex items-center gap-1 bg-gray-50 px-1 py-0.5 rounded shadow-sm border border-gray-100"><span class="w-1.5 h-1.5 rounded-full shrink-0" style="background-color: ${w.color}"></span><span class="text-[9px] md:text-[11px] font-bold text-gray-600 tracking-tight leading-none">${escapeHtml(w.name.substring(0,3))}</span></div>`; });
+                    workerTagsHTML += `</div>`;
+                }
+
+                // Sales Amount
+                let saleDisplayHTML = `<div class="mt-auto pt-1 md:pt-2 text-[10px] md:text-xs text-gray-300 font-medium text-center">-</div>`;
+                if (dailySale !== null) {
+                    if (dailySale === 0) {
+                        saleDisplayHTML = `
+                            <div class="mt-auto pt-1.5 flex flex-col items-center gap-0.5 md:gap-1 w-full border-t border-gray-50">
+                                <div class="w-1 h-1 md:w-1.5 md:h-1.5 rounded-full bg-gray-300"></div>
+                                <div class="text-xs md:text-sm font-black text-gray-500 tracking-tight whitespace-nowrap">0원</div>
+                            </div>`;
+                    } else {
+                        const isReached = dailySale >= dailyAverageTarget;
+                        const amountColor = isReached ? 'text-nana-dark' : 'text-gray-500';
+                        const badgeColor = isReached ? 'bg-nana-dark' : 'bg-green-200';
+                        saleDisplayHTML = `
+                            <div class="mt-auto pt-1.5 flex flex-col items-center gap-0.5 md:gap-1 w-full border-t border-gray-50">
+                                <div class="w-1 h-1 md:w-1.5 md:h-1.5 rounded-full ${badgeColor}"></div>
+                                <div class="text-xs md:text-sm font-black ${amountColor} tracking-tight whitespace-nowrap">${formatKrw(dailySale/10000)}만</div>
+                            </div>`;
+                    }
+                }
+
+                grid.innerHTML += `
+                    <div onclick="selectDay(${i})" oncontextmenu="showContextMenu(event, ${i})" class="p-1.5 md:p-2 rounded-xl border cursor-pointer transition-all flex flex-col relative ${bgClass} overflow-hidden hover:shadow-md min-h-[90px] md:min-h-[120px]">
+                        <div class="flex justify-between items-start w-full">
+                            <div class="text-base md:text-lg font-black ml-0.5 md:ml-1 mt-0.5 ${textClass}">${i}</div>
+                            <div class="flex flex-col items-end">
+                                ${weatherHTML}
+                                ${workerTagsHTML}
+                            </div>
+                        </div>
+                        ${eventDisplayHTML}
+                        ${saleDisplayHTML}
+                    </div>`;
+            }
+            updateDashboard(); renderChartsJS();
+        }
+
+        async function saveDailySales() {
+            const inputEl = document.getElementById('inputDailySales');
+            if(!inputEl) return;
+            let inputVal = inputEl.value.replace(/,/g, ''); 
+            if (inputVal === "") { uiAlert('매출액을 입력해주세요.'); return; }
+            const dateStr = getDateString(displayYear, displayMonth, selectedDay);
+            const btn = document.getElementById('btnSave'); const originalText = btn.innerText;
+            btn.innerText = "저장 중..."; btn.disabled = true;
+
+            try {
+                await gasFetch(`${GOOGLE_WEB_APP_URL}?action=write&date=${dateStr}&sales=${inputVal}`);
+                if(!salesData[dateStr]) salesData[dateStr] = {}; salesData[dateStr].sales = parseInt(inputVal); // Handle 0 explicitly
+                renderCalendar(); 
+                btn.innerText = "저장 완료!"; btn.classList.replace('bg-nana-dark', 'bg-nana-gold');
+            } catch (error) { uiAlert("저장 실패. 네트워크 또는 권한을 확인하세요."); } 
+            finally { setTimeout(() => { btn.innerText = originalText; btn.classList.replace('bg-nana-gold', 'bg-nana-dark'); btn.disabled = false; checkSalesInputLock(); }, 1500); }
+        }
+
+        async function deleteDailySales() {
+            const dateStr = getDateString(displayYear, displayMonth, selectedDay);
+            const hasSales = salesData[dateStr] && salesData[dateStr].sales !== undefined;
+            const hasWorkers = dailyWorkers[dateStr] && dailyWorkers[dateStr].length > 0;
+            if (!hasSales && !hasWorkers) { uiAlert('삭제할 매출이나 근무 기록이 없습니다.'); return; }
+
+            uiConfirm(`${displayMonth + 1}월 ${selectedDay}일의 매출 데이터 및 근무 기록을 일괄 삭제합니다.`, async () => {
+                try {
+                    await gasFetch(`${GOOGLE_WEB_APP_URL}?action=delete&date=${dateStr}`);
+                    if(hasSales) delete salesData[dateStr].sales; 
+                    if(hasWorkers) delete dailyWorkers[dateStr];
+                    if(salesData[dateStr]) { delete salesData[dateStr].worker; delete salesData[dateStr].workers; }
+                    saveWorkersToStorage(); 
+                    const inputEl = document.getElementById('inputDailySales');
+                    if(inputEl) inputEl.value = ''; 
+                    renderCalendar(); 
+                } catch (error) { uiAlert("삭제 처리 중 오류가 발생했습니다."); } 
+            });
+        }
+
+        function updateDashboard() {
+            const daysInMonth = new Date(displayYear, displayMonth + 1, 0).getDate();
+            const dateStr = getDateString(displayYear, displayMonth, selectedDay);
+            
+            document.getElementById('selectedDateDisplay').innerText = `${displayYear}년 ${displayMonth + 1}월 ${selectedDay}일`;
+            const currentData = salesData[dateStr] || {};
+            const inputEl = document.getElementById('inputDailySales');
+            if(inputEl) inputEl.value = currentData.sales !== undefined ? currentData.sales.toLocaleString('ko-KR') : '';
+
+            renderWorkerBadge(); checkSalesInputLock();
+
+            let monthTotal = 0; let prevSales = 0; 
+            for (let i = 1; i <= daysInMonth; i++) {
+                const s = salesData[getDateString(displayYear, displayMonth, i)]?.sales || 0;
+                monthTotal += s; if (i <= selectedDay) prevSales += s; 
+            }
+            const todaySales = currentData.sales || 0;
+
+            // [수정] '오늘' 기준 경과일수와 오늘까지 누적 매출 (선택한 날짜와 무관하게 계산)
+            const today = new Date();
+            let daysPassed = selectedDay;
+            if (displayYear === today.getFullYear() && displayMonth === today.getMonth()) {
+                daysPassed = today.getDate(); 
+            } else if (displayYear > today.getFullYear() || (displayYear === today.getFullYear() && displayMonth > today.getMonth())) {
+                daysPassed = 0; 
+            } else {
+                daysPassed = daysInMonth; 
+            }
+            let salesToToday = 0;
+            for (let i = 1; i <= daysPassed; i++) {
+                salesToToday += salesData[getDateString(displayYear, displayMonth, i)]?.sales || 0;
+            }
+
+            document.getElementById('cardTarget').innerHTML = `${formatKrw(getTargetFor(displayYear, displayMonth))} <span class="text-xs md:text-sm font-medium text-gray-500">원</span>`; // [추가] 월별 목표
+            document.getElementById('cardTotal').innerHTML = `${formatKrw(monthTotal)} <span class="text-xs md:text-sm font-medium text-gray-500">원</span>`;
+            document.getElementById('progressPercent').innerText = `${((monthTotal / getTargetFor(displayYear, displayMonth)) * 100).toFixed(1)}%`;
+
+            const currentMonthPrefix = `${displayYear}-${String(displayMonth + 1).padStart(2, '0')}`;
+            const lastYearMonthPrefix = `${displayYear - 1}-${String(displayMonth + 1).padStart(2, '0')}`;
+            let lastYearMonthTotal = 0;
+            for (const [sDate, dataObj] of Object.entries(salesData)) { if (sDate.startsWith(lastYearMonthPrefix)) lastYearMonthTotal += (dataObj.sales || 0); }
+
+            const yoyEl = document.getElementById('cardYoY');
+            if (lastYearMonthTotal > 0) {
+                const yoyRate = ((monthTotal - lastYearMonthTotal) / lastYearMonthTotal) * 100;
+                if (yoyRate > 0) { yoyEl.innerHTML = `작년 대비 <span class="text-nana-dark ml-1">▲ ${yoyRate.toFixed(1)}%</span>`; yoyEl.className = "text-[10px] md:text-xs font-bold px-2 py-1 rounded bg-green-50 text-gray-600 border border-green-100 shadow-sm whitespace-nowrap"; } 
+                else if (yoyRate < 0) { yoyEl.innerHTML = `작년 대비 <span class="text-blue-500 ml-1">▼ ${Math.abs(yoyRate).toFixed(1)}%</span>`; yoyEl.className = "text-[10px] md:text-xs font-bold px-2 py-1 rounded bg-blue-50 text-gray-600 border border-blue-100 shadow-sm whitespace-nowrap"; } 
+            } else { yoyEl.innerText = "작년 데이터 없음"; yoyEl.className = "text-[10px] md:text-xs font-bold px-2 py-1 rounded bg-gray-50 text-gray-400 border border-gray-100 shadow-sm whitespace-nowrap"; }
+
+            // [수정] 현재 궤도 예상 월매출: 선택 날짜가 아닌 '오늘까지' 실적 기준 (지난달은 실제 합계, 미래 달은 0)
+            const expectedMonth = daysPassed > 0 ? Math.round((salesToToday / daysPassed) * daysInMonth) : 0;
+            document.getElementById('cardExpected').innerHTML = `${formatKrw(expectedMonth)} <span class="text-xs md:text-sm font-medium text-gray-500">원</span>`;
+            const remaining = getTargetFor(displayYear, displayMonth) - monthTotal;
+            document.getElementById('cardRemaining').innerHTML = (remaining > 0 ? formatKrw(remaining) : '🎉 달성 완료!') + (remaining > 0 ? ' <span class="text-xs md:text-sm font-medium text-green-200">원</span>' : '');
+            
+            document.getElementById('detailPrevSales').innerText = formatKrw(prevSales) + " 원";
+
+            // [수정] 오늘까지 일평균 매출: 분자(오늘까지 누적)와 분모(오늘까지 일수)를 같은 기준으로 맞춤
+            let avgToToday = daysPassed > 0 ? Math.round(salesToToday / daysPassed) : 0;
+            document.getElementById('detailAvgToToday').innerText = formatKrw(avgToToday) + " 원";
+
+            const remainingDaysIncludingToday = daysInMonth - selectedDay + 1;
+            let todayTarget = 0;
+            if (remainingDaysIncludingToday > 0) { let prevOnly = prevSales - todaySales; todayTarget = Math.round((getTargetFor(displayYear, displayMonth) - prevOnly) / remainingDaysIncludingToday); }
+            document.getElementById('detailTodayTarget').innerText = formatKrw(todayTarget) + " 원";
+
+            const paceDiff = todaySales - todayTarget;
+            const paceEl = document.getElementById('detailPaceDiff'); const paceBox = document.getElementById('boxPace');
+            if (todaySales === 0) { paceEl.innerText = "-"; paceEl.className = "text-sm md:text-base font-bold text-gray-400 whitespace-nowrap"; paceBox.className = "bg-gray-50 p-3 md:p-4 rounded-xl border border-gray-100 flex justify-between items-center transition-all hover:bg-gray-100/50"; } 
+            else if (paceDiff >= 0) { paceEl.innerText = "+" + formatKrw(paceDiff) + " 원 (초과)"; paceEl.className = "text-sm md:text-base font-extrabold text-nana-dark whitespace-nowrap"; paceBox.className = "bg-green-50 p-3 md:p-4 rounded-xl border border-green-100 flex justify-between items-center transition-all"; } 
+            else { paceEl.innerText = formatKrw(paceDiff) + " 원 (부족)"; paceEl.className = "text-sm md:text-base font-extrabold text-red-500 whitespace-nowrap"; paceBox.className = "bg-red-50 p-3 md:p-4 rounded-xl border border-red-100 flex justify-between items-center transition-all"; }
+
+            const remainingDaysAfterToday = daysInMonth - selectedDay;
+            let nextDaily = 0; if (remainingDaysAfterToday > 0) nextDaily = Math.round((getTargetFor(displayYear, displayMonth) - prevSales) / remainingDaysAfterToday);
+            document.getElementById('detailNextDaily').innerHTML = nextDaily > 0 ? formatKrw(nextDaily) + ' <span class="text-sm md:text-base font-bold">원</span>' : "0 원";
+
+            renderSeedBanner(); // [추가] 9~10월 POS 일괄 반영 배너 상태 갱신
+        }
+
+        function renderChartsJS() {
+            const ctxYearly = document.getElementById('yearlyChartCanvas').getContext('2d');
+            const labelsYearly = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'];
+            const monthlyData = new Array(12).fill(0);
+            const yearPrefix = `${displayYear}-`;
+            for (const [dateStr, dataObj] of Object.entries(salesData)) { if (dateStr.startsWith(yearPrefix)) monthlyData[parseInt(dateStr.split('-')[1]) - 1] += (dataObj.sales || 0); }
+
+            if (yearlyChart) yearlyChart.destroy();
+            yearlyChart = new Chart(ctxYearly, {
+                type: 'bar',
+                data: { labels: labelsYearly, datasets: [{ label: '월별 누적 매출', data: monthlyData, backgroundColor: '#1A4D2E', borderRadius: 4, borderSkipped: false, barPercentage: 0.5 }] },
+                options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, scales: { x: { grid: { display: false }, ticks: { font: { weight: 'bold', size: 10 } } }, y: { beginAtZero: true, border: { display: false }, grid: { color: '#f1f5f9' }, ticks: { callback: function(value) { return formatKrw(value/10000) + '만'; }, padding: 8, font: {size: 10} } } }, plugins: { tooltip: { backgroundColor: 'rgba(15, 23, 42, 0.9)', titleFont: { size: 12 }, bodyFont: { size: 13, weight: 'bold' }, padding: 10, cornerRadius: 8, callbacks: { label: function(context) { return context.dataset.label + ' : ' + formatKrw(context.raw) + ' 원'; } } }, legend: { display: false } } }
+            });
+
+            const ctxDaily = document.getElementById('dailyChartCanvas').getContext('2d');
+            const daysInMonth = new Date(displayYear, displayMonth + 1, 0).getDate();
+            const dailyAverageTarget = getTargetFor(displayYear, displayMonth) / daysInMonth;
+
+            const dailyLabels = [];
+            const dailySalesData = [];
+            const targetLineData = [];
+            const barColors = [];
+
+            for (let i = 1; i <= daysInMonth; i++) {
+                dailyLabels.push(i + '일');
+                let sale = salesData[getDateString(displayYear, displayMonth, i)]?.sales || 0;
+                dailySalesData.push(sale);
+                targetLineData.push(dailyAverageTarget);
+
+                if (sale >= dailyAverageTarget) {
+                    barColors.push('#1A4D2E'); 
+                } else if (sale > 0) {
+                    barColors.push('#bbf7d0'); 
+                } else {
+                    barColors.push('#f1f5f9'); 
+                }
+            }
+
+            if (dailyChart) dailyChart.destroy();
+            dailyChart = new Chart(ctxDaily, {
+                type: 'bar',
+                data: {
+                    labels: dailyLabels,
+                    datasets: [
+                        {
+                            type: 'line',
+                            label: '일일 목표액',
+                            data: targetLineData,
+                            borderColor: '#E65100', 
+                            borderWidth: 2,
+                            borderDash: [5, 5],
+                            pointRadius: 0,
+                            fill: false
+                        },
+                        {
+                            type: 'bar',
+                            label: '일일 발생 매출',
+                            data: dailySalesData,
+                            backgroundColor: barColors,
+                            borderRadius: 4,
+                            barPercentage: 0.6
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+                        y: { beginAtZero: true, border: { display: false }, grid: { color: '#f1f5f9' }, ticks: { callback: function(value) { return formatKrw(value/10000) + '만'; }, padding: 8, font: {size: 10} } }
+                    },
+                    plugins: {
+                        tooltip: { backgroundColor: 'rgba(15, 23, 42, 0.9)', titleFont: { size: 12 }, bodyFont: { size: 13, weight: 'bold' }, padding: 10, cornerRadius: 8, callbacks: { label: function(context) { return context.dataset.label + ' : ' + formatKrw(context.raw) + ' 원'; } } },
+                        legend: { display: false }
+                    }
+                }
+            });
+        }
+
+        window.onload = () => {
+            const salesInput = document.getElementById('inputDailySales'); 
+            const workerInput = document.getElementById('newWorkerName'); 
+            const pwdInput = document.getElementById('inputAnalyticsPwd');
+            
+            // 옵셔널 체이닝으로 요소가 실제로 존재할 때만 이벤트 등록
+            salesInput?.addEventListener('input', function(e) { let value = this.value.replace(/[^0-9]/g, ''); this.value = value ? Number(value).toLocaleString('ko-KR') : ''; });
+            salesInput?.addEventListener('keyup', function(e) { if (e.key === 'Enter' && !this.disabled) { saveDailySales(); this.blur(); } });
+            workerInput?.addEventListener('keyup', function(e) { if (e.key === 'Enter') { addWorkerToList(); this.blur(); } });
+            pwdInput?.addEventListener('keyup', function(e) { if (e.key === 'Enter') { verifyAnalyticsPwd(); } });
+            document.getElementById('inputAppKey')?.addEventListener('keyup', function(e) { if (e.key === 'Enter') { saveAppKey(); } });
+            ['settingsMonthTarget', 'settingsDefaultTarget'].forEach(id => document.getElementById(id)?.addEventListener('input', function() { formatNumberInput(this); }));
+
+            loadDataFromGoogleSheet(); 
+        };
+    </script>
+</body>
+</html>
